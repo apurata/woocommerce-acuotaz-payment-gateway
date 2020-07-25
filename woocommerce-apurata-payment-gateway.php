@@ -86,6 +86,10 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                     return;
                 }
 
+                if ($this->should_hide_apurata_gateway(FALSE)) {
+                    return;
+                }
+
                 $ch = curl_init();
 
                 global $APURATA_API_DOMAIN;
@@ -150,26 +154,39 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 return $this->landing_config;
             }
 
-            function hide_apurata_gateway( $gateways ) {
+            function should_hide_apurata_gateway(bool $talkToApurata = TRUE) {
                 /* Hide Apurata gateway based on some conditions. */
                 $currency = get_woocommerce_currency();
 
                 if ($this->allow_http == "no" && $_SERVER['REQUEST_SCHEME'] != 'https') {
                     error_log('Apurata solo soporta https');
-                    unset( $gateways['apurata'] );
+                    return TRUE;
                 }
                 if( $currency != 'PEN' ){
                     //disable gateway paypal if currency is ABC
                     error_log('Apurata sólo soporta currency=PEN. Currency actual=' . $currency);
-                    unset( $gateways['apurata'] );
+                    return TRUE;
+                }
+
+                if (!$talkToApurata) {
+                    // The following checks require to talk to Apurata
+                    return FALSE;
                 }
 
                 $landing_config = $this->get_landing_config();
                 if ($landing_config->min_amount > WC()->cart->total || $landing_config->max_amount < WC()->cart->total) {
                     error_log('Apurata no financia el monto del carrito: ' . WC()->cart->total);
-                    unset( $gateways['apurata'] );
+                    return TRUE;
                 }
 
+                return FALSE;
+            }
+
+            function hide_apurata_gateway( $gateways ) {
+                /* Hide Apurata gateway based on some conditions. */
+                if ($this->should_hide_apurata_gateway()) {
+                    unset( $gateways['apurata'] );
+                }
                 return $gateways;
             }
 
