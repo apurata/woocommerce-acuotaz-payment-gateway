@@ -20,6 +20,10 @@
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 const APURATA_TEXT_DOMAIN = 'woocommerce-apurata-payment-gateway';
 
+// DEVELOPMENT ONLY: UNCOMMENT TO DISPLAY ERRORS IN HTML
+// $OLD_ERROR_REPORTING_LEVEL = error_reporting(E_ALL | E_NOTICE | -1);
+// $OLD_DISPLAY_ERRORS = ini_set('display_errors', 'stdout');
+
 // Domain to use in browser
 $APURATA_DOMAIN = getenv('APURATA_DOMAIN');
 // Domain to use in API calls.
@@ -72,6 +76,10 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 $this->client_id = $this->get_option( 'client_id' );
                 $this->allow_http = $this->get_option( 'allow_http' );
                 $this->secret_token = $this->get_option( 'secret_token' );
+
+                // Init vars used:
+                $this->pay_with_apurata_addon = NULL;
+                $this->landing_config = NULL;
 
                 $this->gen_pay_with_apurata_html();
 
@@ -315,4 +323,5 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
     add_filter( 'woocommerce_payment_gateways', 'add_wc_apurata_payment_gateway' );
 }
+
 ?>
