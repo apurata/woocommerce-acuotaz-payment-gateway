@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.0.3
+ * Version:           0.0.4
  * Plugin Name:       WooCommerce Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick Apurata loan.
@@ -47,15 +47,15 @@ if (!defined('WC_APURATA_BASENAME')) {
 if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
 
     // Add settings link on plugin page.
-    add_action('plugins_loaded', 'woocommerce_mercadopago_init');
-    function add_settings_link_on_plugin_page($links)
+    add_action('plugins_loaded', 'wc_apurata_init');
+    function wc_apurata_add_settings_link_on_plugin_page($links)
     {
         $plugin_links = array();
         $plugin_links[] = '<a href="' . admin_url('admin.php?page=wc-settings&tab=checkout&section=' . PLUGIN_ID) . '">' . __('Ajustes', 'woocommerce-mercadopago') . '</a>';
         return array_merge($plugin_links, $links);
     }
-    function woocommerce_mercadopago_init() {
-        add_filter('plugin_action_links_' . WC_APURATA_BASENAME, 'add_settings_link_on_plugin_page');
+    function wc_apurata_init() {
+        add_filter('plugin_action_links_' . WC_APURATA_BASENAME, 'wc_apurata_add_settings_link_on_plugin_page');
     }
     // End of Add settings link on plugin page.
 
