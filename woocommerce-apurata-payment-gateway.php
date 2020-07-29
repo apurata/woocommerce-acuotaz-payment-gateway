@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.0.1
+ * Version:           0.0.3
  * Plugin Name:       WooCommerce Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick Apurata loan.
@@ -19,6 +19,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 const APURATA_TEXT_DOMAIN = 'woocommerce-apurata-payment-gateway';
+const PLUGIN_ID = 'apurata';
 
 // DEVELOPMENT ONLY: UNCOMMENT TO DISPLAY ERRORS IN HTML
 // $OLD_ERROR_REPORTING_LEVEL = error_reporting(E_ALL | E_NOTICE | -1);
@@ -38,14 +39,31 @@ if ($APURATA_API_DOMAIN == false) {
     $APURATA_API_DOMAIN = $APURATA_DOMAIN;
 }
 
+if (!defined('WC_APURATA_BASENAME')) {
+    define('WC_APURATA_BASENAME', plugin_basename(__FILE__));
+}
+
 // Check if WooCommerce is active
 if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
+
+    // Add settings link on plugin page.
+    add_action('plugins_loaded', 'woocommerce_mercadopago_init');
+    function add_settings_link_on_plugin_page($links)
+    {
+        $plugin_links = array();
+        $plugin_links[] = '<a href="' . admin_url('admin.php?page=wc-settings&tab=checkout&section=' . PLUGIN_ID) . '">' . __('Ajustes', 'woocommerce-mercadopago') . '</a>';
+        return array_merge($plugin_links, $links);
+    }
+    function woocommerce_mercadopago_init() {
+        add_filter('plugin_action_links_' . WC_APURATA_BASENAME, 'add_settings_link_on_plugin_page');
+    }
+    // End of Add settings link on plugin page.
 
     function init_wc_apurata_payment_gateway() {
         class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway {
 
             public function __construct() {
-                $this->id = 'apurata';
+                $this->id = PLUGIN_ID;
 
                 $this->title = __('Cuotas sin tarjeta de crédito - Apurata', APURATA_TEXT_DOMAIN);
                 $this->description = <<<EOF
