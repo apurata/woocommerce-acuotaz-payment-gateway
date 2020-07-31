@@ -135,6 +135,9 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                     $this->pay_with_apurata_addon = addslashes($this->pay_with_apurata_addon);
                 } else {
                     error_log("Apurata responded with code ". $resp_code);
+                    if ($resp_code == 0) {
+                        error_log("Apurata is using URL ". $url);
+                    }
                     $this->pay_with_apurata_addon = '';
                 }
                 echo(sprintf("<script>window.PAY_WITH_APURATA_ADDON_HTML = '%s';</script>", $this->pay_with_apurata_addon));
@@ -201,7 +204,8 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
                 $landing_config = $this->get_landing_config();
                 if ($landing_config->min_amount > WC()->cart->total || $landing_config->max_amount < WC()->cart->total) {
-                    error_log('Apurata no financia el monto del carrito: ' . WC()->cart->total);
+                    global $APURATA_API_DOMAIN;
+                    error_log('Apurata (' . $APURATA_API_DOMAIN . ') no financia el monto del carrito: ' . WC()->cart->total);
                     return TRUE;
                 }
 
@@ -315,9 +319,9 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                     return;
                 }
 
-                if ($event == 'approved' && $order->get_status() == 'pending') {
-                    $order->update_status('on-hold', __( 'Apurata aprobó la orden, esperando validación de identidad', APURATA_TEXT_DOMAIN ));
-                    $woocommerce->cart->empty_cart();
+                if ($event == 'onhold') {
+                    // Collateral effect: empty cart and don't allow to choose a different payment method
+                    $order->update_status('on-hold', __( 'Apurata puso la orden en onhold', APURATA_TEXT_DOMAIN ));
                 } else if ($event == 'validated') {
                     $order->update_status('processing', __( 'Apurata validó identidad', APURATA_TEXT_DOMAIN ));
                 } else if ($event == 'rejected') {
@@ -325,7 +329,8 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 } else if ($event == 'canceled') {
                     $order->update_status('failed', __( 'El financiamiento en Apurata fue cancelado', APURATA_TEXT_DOMAIN ));
                 } else {
-                    error_log('Evento no soportado: ' . $event);
+                    $order->add_order_note( __( 'Ignorado evento enviado por Apurata: ' . $event, APURATA_TEXT_DOMAIN ) );
+                    error_log('Evento ignorado: ' . $event);
                 }
             }
             /* END OF HOOKS */
