@@ -61,6 +61,9 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
     function init_wc_apurata_payment_gateway() {
         class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway {
+            // Possible improvements:
+            // * replace `should_hide_apurata_gateway()` for overwritting `$this->is_available()`
+            // * replace `WC()->cart->total` for `$this->get_order_total()`
 
             public function __construct() {
                 $this->id = PLUGIN_ID;
