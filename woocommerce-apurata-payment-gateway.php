@@ -119,48 +119,50 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                     return;
                 }
 
-                $ch = curl_init();
+                $url = "/pos/pay-with-apurata-add-on/" . WC()->cart->total;
+                list($resp_code, $this->pay_with_apurata_addon) = $this->make_curl_to_apurata("GET", $url);
 
-                global $APURATA_API_DOMAIN;
-                $url = $APURATA_API_DOMAIN .
-                         '/pos/pay-with-apurata-add-on/' . WC()->cart->total;
-                curl_setopt($ch, CURLOPT_URL, $url);
-
-                $headers = array("Authorization: Bearer " . $this->secret_token);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $this->pay_with_apurata_addon = curl_exec($ch);
-                $resp_code = curl_getinfo($ch , CURLINFO_HTTP_CODE);
-                curl_close($ch);
                 if ($resp_code == 200) {
                     $this->pay_with_apurata_addon = str_replace(array("\r", "\n"), '', $this->pay_with_apurata_addon);
                 } else {
-                    error_log("Apurata responded with code ". $resp_code);
-                    if ($resp_code == 0) {
-                        error_log("Apurata is using URL ". $url);
-                    }
                     $this->pay_with_apurata_addon = '';
                 }
                 echo($this->pay_with_apurata_addon);
             }
 
+            function make_curl_to_apurata($method, $path) {
+                // $method: "GET" or "POST"
+                // $path: e.g. /pos/client/landing_config
+                $ch = curl_init();
+
+                global $APURATA_API_DOMAIN;
+                $url = $APURATA_API_DOMAIN . $path;
+                curl_setopt($ch, CURLOPT_URL, $url);
+
+                $headers = array("Authorization: Bearer " . $this->secret_token);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+
+                if (strtoupper($method) == "GET") {
+                    curl_setopt($ch, CURLOPT_HTTPGET, TRUE);
+                } else if (strtoupper($method) == "POST") {
+                    curl_setopt($ch, CURLOPT_POST, TRUE);
+                } else {
+                    throw new Exception("Method not supported: " . $method);
+                }
+                $ret = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                if ($httpCode != 200) {
+                    error_log("Apurata responded with http_code ". $httpCode . " on " . $method . " to " . $url);
+                }
+                curl_close($ch);
+                return array($httpCode, $ret);
+            }
+
             function get_landing_config() {
                 if (!$this->landing_config) {
-                    $ch = curl_init();
-
-                    global $APURATA_API_DOMAIN;
-                    $url = $APURATA_API_DOMAIN .
-                             '/pos/client/landing_config';
-                    curl_setopt($ch, CURLOPT_URL, $url);
-
-                    $headers = array("Authorization: Bearer " . $this->secret_token);
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                    // $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    $landing_config = curl_exec($ch);
+                    list ($httpCode, $landing_config) = $this->make_curl_to_apurata("GET", "/pos/client/landing_config");
                     $landing_config = json_decode($landing_config);
-                    curl_close($ch);
                     $this->landing_config = $landing_config;
                 }
                 return $this->landing_config;
