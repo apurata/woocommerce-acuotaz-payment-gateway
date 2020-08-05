@@ -273,6 +273,10 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
             function on_new_event_from_apurata() {
                 global $woocommerce;
 
+                // We need a way to debug execution in ecommerce side
+                // We always must write the header Apurata-Log before return
+                $log = "Start;";
+
                 $order_id = intval($_GET["order_id"]);
                 $event = $_GET["event"];
 
@@ -280,6 +284,8 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
                 if (!$order) {
                     error_log('Orden no encontrada: ' . $order_id);
+                    $log = $log . "Order not found;";
+                    header('Apurata-Log: ' . $log);
                     return;
                 }
 
@@ -287,17 +293,25 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 $auth = getallheaders()['Authorization'];
                 if (!$auth) {
                     error_log('Missing authorization header');
+                    $log = $log . "Missing authorization header;";
+                    header('Apurata-Log: ' . $log);
                     return;
                 }
                 list($auth_type, $token) = explode(' ', $auth);
                 if (strtolower($auth_type) != 'bearer'){
                     error_log('Invalid authorization type');
+                    $log = $log . "Invalid authorization type;";
+                    header('Apurata-Log: ' . $log);
                     return;
                 }
                 if ($token != $this->secret_token) {
                     error_log('Invalid authorization token');
+                    $log = $log . "Invalid authorization token;";
+                    header('Apurata-Log: ' . $log);
                     return;
                 }
+
+                $log = $log . "Success auth;";
 
                 if ($event == 'onhold') {
                     // Collateral effect: empty cart and don't allow to choose a different payment method
@@ -311,7 +325,12 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 } else {
                     $order->add_order_note( __( 'Ignorado evento enviado por Apurata: ' . $event, APURATA_TEXT_DOMAIN ) );
                     error_log('Evento ignorado: ' . $event);
+                    $log = $log . "Ignored event " . $event . ";";
                 }
+
+                $log = $log . "Done;";
+                header('Apurata-Log: ' . $log);
+                return;
             }
             /* END OF HOOKS */
         }
