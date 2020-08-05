@@ -290,7 +290,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 }
 
                 // Check Authorization
-                $auth = getallheaders()['Authorization'];
+                $auth = getallheaders()['Apurata-Auth'];
                 if (!$auth) {
                     error_log('Missing authorization header');
                     $log = $log . "Missing authorization header;";
