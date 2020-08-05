@@ -286,6 +286,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                     error_log('Orden no encontrada: ' . $order_id);
                     $log = $log . "Order not found;";
                     header('Apurata-Log: ' . $log);
+                    http_response_code(404);
                     return;
                 }
 
@@ -295,6 +296,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                     error_log('Missing authorization header');
                     $log = $log . "Missing authorization header;";
                     header('Apurata-Log: ' . $log);
+                    http_response_code(401);
                     return;
                 }
                 list($auth_type, $token) = explode(' ', $auth);
@@ -302,12 +304,14 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                     error_log('Invalid authorization type');
                     $log = $log . "Invalid authorization type;";
                     header('Apurata-Log: ' . $log);
+                    http_response_code(401);
                     return;
                 }
                 if ($token != $this->secret_token) {
                     error_log('Invalid authorization token');
                     $log = $log . "Invalid authorization token;";
                     header('Apurata-Log: ' . $log);
+                    http_response_code(401);
                     return;
                 }
 
