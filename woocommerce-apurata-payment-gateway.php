@@ -253,6 +253,9 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                                  '&url_redir_on_canceled=' . urlencode(wc_get_checkout_url()) .
                                  '&url_redir_on_rejected=' . urlencode(wc_get_checkout_url()) .
                                  '&url_redir_on_success=' . urlencode($this->get_return_url( $order )) .
+                                 '&customer_data__customer_id=' . urlencode($order->get_customer_id()) .
+                                 '&customer_data__billing_company=' . urlencode($order->get_billing_company()) .
+                                 '&customer_data__shipping_company=' . urlencode($order->get_shipping_company()) .
                                  '&customer_data__email=' . urlencode($order->get_billing_email()) .
                                  '&customer_data__phone=' . urlencode($order->get_billing_phone()) .
                                  '&customer_data__billing_address_1=' . urlencode($order->get_billing_address_1()) .
