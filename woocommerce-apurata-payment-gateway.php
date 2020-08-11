@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.0.7
+ * Version:           0.0.8
  * Plugin Name:       WooCommerce Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick Apurata loan.
