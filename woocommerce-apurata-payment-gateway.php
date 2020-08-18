@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.0.8
+ * Version:           0.0.9
  * Plugin Name:       WooCommerce Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick Apurata loan.
@@ -46,6 +46,7 @@ if (!defined('WC_APURATA_BASENAME')) {
 // Check if WooCommerce is active
 if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
 
+
     // Add settings link on plugin page.
     add_action('plugins_loaded', 'wc_apurata_init');
     function wc_apurata_add_settings_link_on_plugin_page($links)
@@ -59,11 +60,20 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
     }
     // End of Add settings link on plugin page.
 
+
+    // Display on each shop item "Págalo en cuotas con Apurata"
+    // See: https://www.businessbloomer.com/woocommerce-visual-hook-guide-single-product-page/#more-19252
+    add_action( 'woocommerce_before_add_to_cart_form', 'show_pay_with_apurata' );
+    function show_pay_with_apurata() {
+        global $product;
+        $apurata_gateway = new WC_Apurata_Payment_Gateway();
+        $apurata_gateway->gen_pay_with_apurata_html($product->get_price());
+    }
+    // End of Display on each shop item "Págalo en cuotas con Apurata"
+
+
     function init_wc_apurata_payment_gateway() {
         class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway {
-            // Possible improvements:
-            // * replace `should_hide_apurata_gateway()` for overwritting `$this->is_available()`
-            // * replace `WC()->cart->total` for `$this->get_order_total()`
 
             public function __construct() {
                 $this->id = PLUGIN_ID;
@@ -104,22 +114,27 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
                 add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
 
-                add_filter( 'woocommerce_available_payment_gateways', array( $this, 'hide_apurata_gateway' ) );
                 add_action( 'woocommerce_api_on_new_event_from_apurata', array($this, 'on_new_event_from_apurata') );
 
+                // See: https://www.businessbloomer.com/woocommerce-visual-hook-guide-cart-page/#more-19167
                 add_action( 'woocommerce_proceed_to_checkout', array( $this, 'gen_pay_with_apurata_html'), 15);
             }
 
-            function gen_pay_with_apurata_html() {
+            public function gen_pay_with_apurata_html($loan_amount = NULL) {
                 if ($this->pay_with_apurata_addon) {
                     return;
                 }
 
+                if (!$loan_amount) {
+                    $loan_amount = $this->get_order_total();
+                }
+
                 if ($this->should_hide_apurata_gateway(FALSE)) {
+                    // Don't talk to apurata, the add-on endpoint will run the validations
                     return;
                 }
 
-                $url = "/pos/pay-with-apurata-add-on/" . WC()->cart->total;
+                $url = "/pos/pay-with-apurata-add-on/" . $loan_amount;
                 list($resp_code, $this->pay_with_apurata_addon) = $this->make_curl_to_apurata("GET", $url);
 
                 if ($resp_code == 200) {
@@ -188,21 +203,17 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 }
 
                 $landing_config = $this->get_landing_config();
-                if ($landing_config->min_amount > WC()->cart->total || $landing_config->max_amount < WC()->cart->total) {
+                if ($landing_config->min_amount > $this->get_order_total() || $landing_config->max_amount < $this->get_order_total()) {
                     global $APURATA_API_DOMAIN;
-                    error_log('Apurata (' . $APURATA_API_DOMAIN . ') no financia el monto del carrito: ' . WC()->cart->total);
+                    error_log('Apurata (' . $APURATA_API_DOMAIN . ') no financia el monto del carrito: ' . $this->get_order_total());
                     return TRUE;
                 }
 
                 return FALSE;
             }
 
-            function hide_apurata_gateway( $gateways ) {
-                /* Hide Apurata gateway based on some conditions. */
-                if ($this->should_hide_apurata_gateway()) {
-                    unset( $gateways['apurata'] );
-                }
-                return $gateways;
+            public function is_available() {
+                return !$this->should_hide_apurata_gateway();
             }
 
 
