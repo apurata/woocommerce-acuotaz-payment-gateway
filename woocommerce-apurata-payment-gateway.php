@@ -1,9 +1,9 @@
 <?php
 /**
- * Version:           0.0.9
- * Plugin Name:       WooCommerce Apurata Payment Gateway
+ * Version:           0.0.10
+ * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
- * Description:       Finance your purchases with a quick Apurata loan.
+ * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
  * Tested up to:      4.2.0
  * Requires at least: 5.2
  * Requires PHP:      7.2
@@ -78,7 +78,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
             public function __construct() {
                 $this->id = PLUGIN_ID;
 
-                $this->title = __('Cuotas sin tarjeta de crédito - Apurata', APURATA_TEXT_DOMAIN);
+                $this->title = __('Cuotas sin tarjeta de crédito - aCuotaz', APURATA_TEXT_DOMAIN);
                 $this->description = <<<EOF
                     <div id="apurata-pos-steps"></div>
                     <script>
@@ -93,11 +93,13 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                     </script>
                 EOF;
 
-                $this->icon = 'https://static.apurata.com/img/logo-dark.svg';
+                # Eventually this image will change, preserving the URL
+                $this->icon = 'https://static.apurata.com/img/logo-dark-aCuotaz.svg';
+
                 $this->has_fields = FALSE;
 
                 // Shown in the admin panel:
-                $this->method_title = 'Apurata';
+                $this->method_title = 'aCuotaz Apurata';
                 $this->method_description = __('Evalúa a tus clientes y financia su compra con cuotas quincenales, sin tarjeta de crédito', APURATA_TEXT_DOMAIN);
 
                 $this->init_form_fields();
@@ -223,7 +225,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                     (
                         'title' => __('Habilitar', APURATA_TEXT_DOMAIN) . '/' . __('Deshabilitar', APURATA_TEXT_DOMAIN),
                         'type' => 'checkbox',
-                        'label' => __('Habilitar Apurata', APURATA_TEXT_DOMAIN),
+                        'label' => __('Habilitar aCuotaz Apurata', APURATA_TEXT_DOMAIN),
                         'default' => 'yes'
                     ),
                     'allow_http' => array
