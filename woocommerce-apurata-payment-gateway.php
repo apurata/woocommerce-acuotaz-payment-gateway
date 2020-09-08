@@ -91,7 +91,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                         };
                         r.send();
                     </script>
-                EOF;
+EOF;
 
                 # Eventually this image will change, preserving the URL
                 $this->icon = 'https://static.apurata.com/img/logo-dark-aCuotaz.svg';
