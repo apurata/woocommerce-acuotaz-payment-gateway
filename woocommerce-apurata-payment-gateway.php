@@ -193,7 +193,22 @@ EOF;
                 /* Hide Apurata gateway based on some conditions. */
                 $currency = get_woocommerce_currency();
 
-                if ($this->allow_http == "no" && $_SERVER['REQUEST_SCHEME'] != 'https') {
+                // See https://www.designcise.com/web/tutorial/how-to-check-for-https-request-in-php
+                $isHttps =
+                    $_SERVER['HTTPS']
+                    ?? $_SERVER['REQUEST_SCHEME']
+                    ?? $_SERVER['HTTP_X_FORWARDED_PROTO']
+                    ?? null
+                ;
+
+                $isHttps =
+                    $isHttps && (
+                        strcasecmp('on', $isHttps) == 0
+                        || strcasecmp('https', $isHttps) == 0
+                    )
+                ;
+
+                if ($this->allow_http == "no" && !$isHttps) {
                     error_log('Apurata solo soporta https');
                     return TRUE;
                 }
