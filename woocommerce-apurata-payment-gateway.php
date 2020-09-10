@@ -1,11 +1,11 @@
 <?php
 /**
- * Version:           0.1.0
+ * Version:           0.1.1
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
  * Requires at least: 5.4.1
- * Requires PHP:      7.2
+ * Requires PHP:      7.0.25
  * Author:            Apurata
  * Author URI:        https://app.apurata.com/
  * License:           GPL3
@@ -13,7 +13,7 @@
  * Text Domain:       woocommerce-apurata-payment-gateway
  *
  * WC requires at least: 4.2.0
- * WC tested up to: 4.2.0
+ * WC tested up to: 4.5.1
 */
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
