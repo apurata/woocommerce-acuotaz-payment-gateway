@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.1.1
+ * Version:           0.1.2
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
@@ -66,7 +66,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
     function show_pay_with_apurata() {
         global $product;
         $apurata_gateway = new WC_Apurata_Payment_Gateway();
-        $apurata_gateway->gen_pay_with_apurata_html($product->get_price());
+        $apurata_gateway->gen_pay_with_apurata_html("product", $product->get_price());
     }
     // End of Display on each shop item "Págalo en cuotas con Apurata"
 
@@ -118,10 +118,14 @@ EOF;
                 add_action( 'woocommerce_api_on_new_event_from_apurata', array($this, 'on_new_event_from_apurata') );
 
                 // See: https://www.businessbloomer.com/woocommerce-visual-hook-guide-cart-page/#more-19167
-                add_action( 'woocommerce_proceed_to_checkout', array( $this, 'gen_pay_with_apurata_html'), 15);
+                add_action( 'woocommerce_proceed_to_checkout', array( $this, 'on_proceed_to_checkout'), 15);
             }
 
-            public function gen_pay_with_apurata_html($loan_amount = NULL) {
+            public function on_proceed_to_checkout() {
+                $this->gen_pay_with_apurata_html("cart");
+            }
+
+            public function gen_pay_with_apurata_html($page, $loan_amount = NULL) {
                 if ($this->pay_with_apurata_addon) {
                     return;
                 }
@@ -136,6 +140,27 @@ EOF;
                 }
 
                 $url = "/pos/pay-with-apurata-add-on/" . $loan_amount;
+
+                $url = add_query_arg( 'page', urlencode($page), $url );
+
+                global $product;
+                if ($product) {
+                    $url = add_query_arg( array(
+                        'product__id' => urlencode($product->id),
+                        'product__name' => urlencode($product->get_title()),
+                    ), $url );
+                }
+
+                global $current_user;
+                if ($current_user) {
+                    $url = add_query_arg( array(
+                        'user__id' => urlencode((string) $current_user->ID),
+                        'user__email' => urlencode((string) $current_user->user_email),
+                        'user__first_name' => urlencode((string) $current_user->first_name),
+                        'user__last_name' => urlencode((string) $current_user->last_name),
+                    ), $url );
+                }
+
                 list($resp_code, $this->pay_with_apurata_addon) = $this->make_curl_to_apurata("GET", $url);
 
                 if ($resp_code == 200) {
