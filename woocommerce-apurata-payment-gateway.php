@@ -1,10 +1,10 @@
 <?php
 /**
- * Version:           0.1.2
+ * Version:           0.1.3
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
- * Requires at least: 5.4.1
+ * Requires at least: 5.3.2
  * Requires PHP:      7.0.25
  * Author:            Apurata
  * Author URI:        https://app.apurata.com/
@@ -12,7 +12,7 @@
  * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain:       woocommerce-apurata-payment-gateway
  *
- * WC requires at least: 4.2.0
+ * WC requires at least: 3.8.1
  * WC tested up to: 4.5.1
 */
 
@@ -67,11 +67,17 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
     // Display on each shop item "Págalo en cuotas con Apurata"
     // See: https://www.businessbloomer.com/woocommerce-visual-hook-guide-single-product-page/#more-19252
-    add_action( 'woocommerce_before_add_to_cart_form', 'show_pay_with_apurata' );
-    function show_pay_with_apurata() {
+    add_action( 'woocommerce_before_add_to_cart_form', 'on_every_product' );
+    function on_every_product() {
         global $product;
         $apurata_gateway = new WC_Apurata_Payment_Gateway();
         $apurata_gateway->gen_pay_with_apurata_html("product", $product->get_price());
+    }
+    // See: https://www.businessbloomer.com/woocommerce-visual-hook-guide-cart-page/#more-19167
+    add_action( 'woocommerce_proceed_to_checkout', 'on_proceed_to_checkout', 15);
+    function on_proceed_to_checkout() {
+        $apurata_gateway = new WC_Apurata_Payment_Gateway();
+        $apurata_gateway->gen_pay_with_apurata_html("cart");
     }
     // End of Display on each shop item "Págalo en cuotas con Apurata"
 
@@ -121,13 +127,6 @@ EOF;
                 add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
 
                 add_action( 'woocommerce_api_on_new_event_from_apurata', array($this, 'on_new_event_from_apurata') );
-
-                // See: https://www.businessbloomer.com/woocommerce-visual-hook-guide-cart-page/#more-19167
-                add_action( 'woocommerce_proceed_to_checkout', array( $this, 'on_proceed_to_checkout'), 15);
-            }
-
-            public function on_proceed_to_checkout() {
-                $this->gen_pay_with_apurata_html("cart");
             }
 
             public function gen_pay_with_apurata_html($page, $loan_amount = NULL) {
