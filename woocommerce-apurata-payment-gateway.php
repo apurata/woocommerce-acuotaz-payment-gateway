@@ -45,6 +45,11 @@ if (!defined('WC_APURATA_BASENAME')) {
 // Check if WooCommerce is active
 if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
 
+    function apurata_log($message) {
+        if (getenv('APURATA_DEBUG')) {
+            error_log($message);
+        }
+    }
 
     // Add settings link on plugin page.
     add_action('plugins_loaded', 'wc_apurata_init');
@@ -198,7 +203,7 @@ EOF;
                 $ret = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 if ($httpCode != 200) {
-                    error_log("Apurata responded with http_code ". $httpCode . " on " . $method . " to " . $url);
+                    apurata_log("Apurata responded with http_code ". $httpCode . " on " . $method . " to " . $url);
                 }
                 curl_close($ch);
                 return array($httpCode, $ret);
@@ -233,12 +238,12 @@ EOF;
                 ;
 
                 if ($this->allow_http == "no" && !$isHttps) {
-                    error_log('Apurata solo soporta https');
+                    apurata_log('Apurata solo soporta https');
                     return TRUE;
                 }
                 if( $currency != 'PEN' ){
                     //disable gateway paypal if currency is ABC
-                    error_log('Apurata sólo soporta currency=PEN. Currency actual=' . $currency);
+                    apurata_log('Apurata sólo soporta currency=PEN. Currency actual=' . $currency);
                     return TRUE;
                 }
 
@@ -250,7 +255,7 @@ EOF;
                 $landing_config = $this->get_landing_config();
                 if ($landing_config->min_amount > $this->get_order_total() || $landing_config->max_amount < $this->get_order_total()) {
                     global $APURATA_API_DOMAIN;
-                    error_log('Apurata (' . $APURATA_API_DOMAIN . ') no financia el monto del carrito: ' . $this->get_order_total());
+                    apurata_log('Apurata (' . $APURATA_API_DOMAIN . ') no financia el monto del carrito: ' . $this->get_order_total());
                     return TRUE;
                 }
 
@@ -347,7 +352,7 @@ EOF;
                 $order = wc_get_order( $order_id );
 
                 if (!$order) {
-                    error_log('Orden no encontrada: ' . $order_id);
+                    apurata_log('Orden no encontrada: ' . $order_id);
                     $log = $log . "Order not found;";
                     header('Apurata-Log: ' . $log);
                     http_response_code(404);
@@ -357,7 +362,7 @@ EOF;
                 // Check Authorization
                 $auth = getallheaders()['Apurata-Auth'];
                 if (!$auth) {
-                    error_log('Missing authorization header');
+                    apurata_log('Missing authorization header');
                     $log = $log . "Missing authorization header;";
                     header('Apurata-Log: ' . $log);
                     http_response_code(401);
@@ -365,14 +370,14 @@ EOF;
                 }
                 list($auth_type, $token) = explode(' ', $auth);
                 if (strtolower($auth_type) != 'bearer'){
-                    error_log('Invalid authorization type');
+                    apurata_log('Invalid authorization type');
                     $log = $log . "Invalid authorization type;";
                     header('Apurata-Log: ' . $log);
                     http_response_code(401);
                     return;
                 }
                 if ($token != $this->secret_token) {
-                    error_log('Invalid authorization token');
+                    apurata_log('Invalid authorization token');
                     $log = $log . "Invalid authorization token;";
                     header('Apurata-Log: ' . $log);
                     http_response_code(401);
@@ -392,7 +397,7 @@ EOF;
                     $order->update_status('failed', __( 'El financiamiento en Apurata fue cancelado', APURATA_TEXT_DOMAIN ));
                 } else {
                     $order->add_order_note( __( 'Ignorado evento enviado por Apurata: ' . $event, APURATA_TEXT_DOMAIN ) );
-                    error_log('Evento ignorado: ' . $event);
+                    apurata_log('Evento ignorado: ' . $event);
                     $log = $log . "Ignored event " . $event . ";";
                 }
 
