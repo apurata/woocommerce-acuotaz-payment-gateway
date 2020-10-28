@@ -390,15 +390,17 @@ EOF;
 
                 if ($event == 'onhold') {
                     // Collateral effect: empty cart and don't allow to choose a different payment method
-                    $order->update_status('on-hold', __( 'Apurata puso la orden en onhold', APURATA_TEXT_DOMAIN ));
+                    $order->update_status('on-hold', __( 'aCuotaz puso la orden en onhold', APURATA_TEXT_DOMAIN ));
                 } else if ($event == 'validated') {
-                    $order->update_status('processing', __( 'Apurata validó identidad', APURATA_TEXT_DOMAIN ));
+                    $order->update_status('processing', __( 'aCuotaz validó identidad', APURATA_TEXT_DOMAIN ));
                 } else if ($event == 'rejected') {
-                    $order->update_status('failed', __( 'Apurata rechazó la orden', APURATA_TEXT_DOMAIN ));
+                    $order->update_status('failed', __( 'aCuotaz rechazó la orden', APURATA_TEXT_DOMAIN ));
                 } else if ($event == 'canceled') {
-                    $order->update_status('failed', __( 'El financiamiento en Apurata fue cancelado', APURATA_TEXT_DOMAIN ));
+                    $order->update_status('failed', __( 'El financiamiento en aCuotaz fue cancelado', APURATA_TEXT_DOMAIN ));
+                } else if ($event == 'funded') {
+                    $order->add_order_note( __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar', APURATA_TEXT_DOMAIN ) );
                 } else {
-                    $order->add_order_note( __( 'Ignorado evento enviado por Apurata: ' . $event, APURATA_TEXT_DOMAIN ) );
+                    $order->add_order_note( __( 'Ignorado evento enviado por aCuotaz: ' . $event, APURATA_TEXT_DOMAIN ) );
                     apurata_log('Evento ignorado: ' . $event);
                     $log = $log . "Ignored event " . $event . ";";
                 }
