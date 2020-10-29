@@ -119,7 +119,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 $this->title = __('Cuotas sin tarjeta de crédito - aCuotaz', APURATA_TEXT_DOMAIN);
                 $this->description = <<<EOF
                     <div id="apurata-pos-steps"></div>
-                    <script>
+                    <script style="display:none">
                         var r = new XMLHttpRequest();
                         r.open("GET", "https://apurata.com/pos/info-steps", true);
                         r.onreadystatechange = function () {
