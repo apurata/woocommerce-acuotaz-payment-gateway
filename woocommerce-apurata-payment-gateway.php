@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.2.0
+ * Version:           0.2.1
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
@@ -241,7 +241,9 @@ EOF;
 
                 if ($fire_and_forget) {
                     // From: https://www.xspdf.com/resolution/52447753.html
-                    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 1);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 1);
+                    // We don't use CURLOPT_TIMEOUT_MS because the name resolution fails and the
+                    // whole request never goes out
                     curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
                 }
 
