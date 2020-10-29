@@ -308,30 +308,47 @@ EOF;
                 global $APURATA_DOMAIN;
                 $order = wc_get_order( $order_id );
 
-                $redirect_url = $APURATA_DOMAIN .
-                                 '/pos/crear-orden-y-continuar' .
-                                 '?order_id=' . urlencode($order->get_id()) .
-                                 '&pos_client_id=' . urlencode($this->client_id) .
-                                 '&amount=' . urlencode($order->get_total()) .
-                                 '&url_redir_on_canceled=' . urlencode(wc_get_checkout_url()) .
-                                 '&url_redir_on_rejected=' . urlencode(wc_get_checkout_url()) .
-                                 '&url_redir_on_success=' . urlencode($this->get_return_url( $order )) .
-                                 '&customer_data__customer_id=' . urlencode($order->get_customer_id()) .
-                                 '&customer_data__billing_company=' . urlencode($order->get_billing_company()) .
-                                 '&customer_data__shipping_company=' . urlencode($order->get_shipping_company()) .
-                                 '&customer_data__email=' . urlencode($order->get_billing_email()) .
-                                 '&customer_data__phone=' . urlencode($order->get_billing_phone()) .
-                                 '&customer_data__billing_address_1=' . urlencode($order->get_billing_address_1()) .
-                                 '&customer_data__billing_address_2=' . urlencode($order->get_billing_address_2()) .
-                                 '&customer_data__billing_first_name=' . urlencode($order->get_billing_first_name()) .
-                                 '&customer_data__billing_last_name=' . urlencode($order->get_billing_last_name()) .
-                                 '&customer_data__billing_city=' . urlencode($order->get_billing_city()) .
-                                 '&customer_data__shipping_address_1=' . urlencode($order->get_shipping_address_1()) .
-                                 '&customer_data__shipping_address_2=' . urlencode($order->get_shipping_address_2()) .
-                                 '&customer_data__shipping_first_name=' . urlencode($order->get_shipping_first_name()) .
-                                 '&customer_data__shipping_last_name=' . urlencode($order->get_shipping_last_name()) .
-                                 '&customer_data__shipping_city=' . urlencode($order->get_shipping_city()) ;
+                $redirect_url = $APURATA_DOMAIN . '/pos/crear-orden-y-continuar';
 
+                $redirect_url = add_query_arg( array(
+                    'order_id' => urlencode($order->get_id()),
+                    'pos_client_id' => urlencode($this->client_id),
+                    'amount' => urlencode($order->get_total()),
+                    'url_redir_on_canceled' => urlencode(wc_get_checkout_url()),
+                    'url_redir_on_rejected' => urlencode(wc_get_checkout_url()),
+                    'url_redir_on_success' => urlencode($this->get_return_url( $order )),
+                    'customer_data__customer_id' => urlencode($order->get_customer_id()),
+                    'customer_data__billing_company' => urlencode($order->get_billing_company()),
+                    'customer_data__shipping_company' => urlencode($order->get_shipping_company()),
+                    'customer_data__email' => urlencode($order->get_billing_email()),
+                    'customer_data__phone' => urlencode($order->get_billing_phone()),
+                    'customer_data__billing_address_1' => urlencode($order->get_billing_address_1()),
+                    'customer_data__billing_address_2' => urlencode($order->get_billing_address_2()),
+                    'customer_data__billing_first_name' => urlencode($order->get_billing_first_name()),
+                    'customer_data__billing_last_name' => urlencode($order->get_billing_last_name()),
+                    'customer_data__billing_city' => urlencode($order->get_billing_city()),
+                    'customer_data__shipping_address_1' => urlencode($order->get_shipping_address_1()),
+                    'customer_data__shipping_address_2' => urlencode($order->get_shipping_address_2()),
+                    'customer_data__shipping_first_name' => urlencode($order->get_shipping_first_name()),
+                    'customer_data__shipping_last_name' => urlencode($order->get_shipping_last_name()),
+                    'customer_data__shipping_city' => urlencode($order->get_shipping_city()),
+                ), $redirect_url);
+
+                // Add dni if it exists
+                $dni = get_post_meta($order->get_id(), "billing_dni", TRUE);
+                if ($dni) {
+                    $redirect_url = add_query_arg( array(
+                        'customer_data__dni' => urlencode($dni),
+                    ), $redirect_url);
+                }
+
+                // Add last_name_m if it exists
+                $last_name_m = get_post_meta($order->get_id(), "billing_apmaterno", TRUE);
+                if ($last_name_m) {
+                    $redirect_url = add_query_arg( array(
+                        'customer_data__billing_last_name_m' => urlencode($last_name_m),
+                    ), $redirect_url);
+                }
 
                 // Return thankyou redirect
                 return array(
