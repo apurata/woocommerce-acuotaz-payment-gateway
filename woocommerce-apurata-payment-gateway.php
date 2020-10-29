@@ -53,8 +53,28 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
     // Add settings link on plugin page.
     add_action('plugins_loaded', 'wc_apurata_init');
-    function wc_apurata_add_settings_link_on_plugin_page($links)
-    {
+    function update_pos_client_context() {
+        if ( is_admin() ) {
+            global $wp_version;
+            if( ! function_exists( 'get_plugin_data' ) ) {
+                require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
+            }
+
+            $apurata_gateway = new WC_Apurata_Payment_Gateway();
+            $url = "/pos/client/" . $apurata_gateway->client_id . "/context";
+            $apurata_gateway->make_curl_to_apurata("POST", $url, array(
+                "php_version" => PHP_VERSION,
+                "wordpress_version" => $wp_version,
+                "woocommerce_version" => WC_VERSION,
+                "wc_acuotaz_version" => get_plugin_data( __FILE__ )["Version"],
+            ), TRUE);
+        }
+    }
+    function wc_apurata_add_settings_link_on_plugin_page($links) {
+        try {
+            update_pos_client_context();
+        } catch (SomeException $e) {}
+
         $plugin_links = array();
         $plugin_links[] = '<a href="' . admin_url('admin.php?page=wc-settings&tab=checkout&section=' . PLUGIN_ID) . '">' . __('Ajustes', 'woocommerce-mercadopago') . '</a>';
         return array_merge($plugin_links, $links);
@@ -71,7 +91,6 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
     function on_every_product() {
         global $product;
         $apurata_gateway = new WC_Apurata_Payment_Gateway();
-        // There are products with variable price that we don't handle yet
 
         if ($product->is_type('variable')) {
             // Has different prices
@@ -184,9 +203,10 @@ EOF;
                 echo($this->pay_with_apurata_addon);
             }
 
-            function make_curl_to_apurata($method, $path) {
+            function make_curl_to_apurata($method, $path, $data=NULL, $fire_and_forget=FALSE) {
                 // $method: "GET" or "POST"
                 // $path: e.g. /pos/client/landing_config
+                // If data is present, send it via JSON
                 $ch = curl_init();
 
                 global $APURATA_API_DOMAIN;
@@ -198,7 +218,6 @@ EOF;
                 curl_setopt($ch, CURLOPT_TIMEOUT, 2); // seconds
 
                 $headers = array("Authorization: Bearer " . $this->secret_token);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 
                 if (strtoupper($method) == "GET") {
@@ -208,6 +227,24 @@ EOF;
                 } else {
                     throw new Exception("Method not supported: " . $method);
                 }
+
+                if ($data) {
+                    $payload = json_encode($data);
+
+                    // Attach encoded JSON string to the POST fields
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+
+                    // Set the content type to application/json
+                    array_push($headers, 'Content-Type:application/json');
+                }
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+                if ($fire_and_forget) {
+                    // From: https://www.xspdf.com/resolution/52447753.html
+                    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 1);
+                    curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
+                }
+
                 $ret = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 if ($httpCode != 200) {
