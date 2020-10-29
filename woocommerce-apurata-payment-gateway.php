@@ -72,7 +72,13 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         global $product;
         $apurata_gateway = new WC_Apurata_Payment_Gateway();
         // There are products with variable price that we don't handle yet
-        $apurata_gateway->gen_pay_with_apurata_html("product", $product->get_price());
+
+        if ($product->is_type('variable')) {
+            // Has different prices
+            $apurata_gateway->gen_pay_with_apurata_html("product", "variable");
+        } else {
+            $apurata_gateway->gen_pay_with_apurata_html("product", $product->get_price());
+        }
     }
     // See: https://www.businessbloomer.com/woocommerce-visual-hook-guide-cart-page/#more-19167
     add_action( 'woocommerce_proceed_to_checkout', 'on_proceed_to_checkout', 15);
