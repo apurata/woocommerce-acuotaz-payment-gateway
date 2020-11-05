@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.2.2
+ * Version:           0.2.3
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
@@ -475,7 +475,12 @@ EOF;
                 } else if ($event == 'canceled') {
                     $order->update_status('failed', __( 'El financiamiento en aCuotaz fue cancelado', APURATA_TEXT_DOMAIN ));
                 } else if ($event == 'funded') {
-                    $order->update_status('processing', __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar', APURATA_TEXT_DOMAIN ));
+                    if ($_GET["transaction_id"]) {
+                        $msg = __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar con transaction_id=' . $_GET["transaction_id"], APURATA_TEXT_DOMAIN );
+                    } else {
+                        $msg = __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar', APURATA_TEXT_DOMAIN );
+                    }
+                    $order->update_status('processing', $msg);
                 } else {
                     $order->add_order_note( __( 'Ignorado evento enviado por aCuotaz: ' . $event, APURATA_TEXT_DOMAIN ) );
                     apurata_log('Evento ignorado: ' . $event);
