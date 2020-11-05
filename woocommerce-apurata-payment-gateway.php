@@ -99,7 +99,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 $apurata_gateway->gen_pay_with_apurata_html("product", $product->get_price());
             }
             else {
-                $apurata_gateway->gen_pay_with_apurata_html("product", "variable");
+                $apurata_gateway->gen_pay_with_apurata_html("product", $product->get_variation_sale_price('min', true), TRUE);
             }
         } else {
             $apurata_gateway->gen_pay_with_apurata_html("product", $product->get_price());
@@ -163,7 +163,7 @@ EOF;
                 add_action( 'woocommerce_api_on_new_event_from_apurata', array($this, 'on_new_event_from_apurata') );
             }
 
-            public function gen_pay_with_apurata_html($page, $loan_amount = NULL) {
+            public function gen_pay_with_apurata_html($page, $loan_amount = NULL, $variable_price=FALSE) {
                 if ($this->pay_with_apurata_addon) {
                     return;
                 }
@@ -203,6 +203,10 @@ EOF;
                         'user__last_name' => urlencode((string) $current_user->last_name),
                     ), $url );
                 }
+
+                $url = add_query_arg( array(
+                    'variable_amount' => $variable_price,
+                ), $url );
 
                 list($resp_code, $this->pay_with_apurata_addon) = $this->make_curl_to_apurata("GET", $url);
 
