@@ -477,6 +477,7 @@ EOF;
                 } else if ($event == 'funded') {
                     if ($_GET["transaction_id"]) {
                         $msg = __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar con transaction_id=' . $_GET["transaction_id"], APURATA_TEXT_DOMAIN );
+                        add_post_meta($order->get_id(), 'acuotaz_transaction_id', $_GET["transaction_id"], TRUE);
                     } else {
                         $msg = __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar', APURATA_TEXT_DOMAIN );
                     }
