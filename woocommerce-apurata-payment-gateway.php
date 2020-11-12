@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.2.4
+ * Version:           0.2.5
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
@@ -95,7 +95,8 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         if ($product->is_type('variable')) {
             // Has different prices
             $available_variations = $product->get_available_variations();
-            if ( count($available_variations) == 1 ) {
+            $single_price = $product->get_variation_sale_price('min', true) == $product->get_variation_sale_price('max', true);
+            if ( count($available_variations) == 1 or $single_price) {
                 $apurata_gateway->gen_pay_with_apurata_html("product", $product->get_price());
             }
             else {
