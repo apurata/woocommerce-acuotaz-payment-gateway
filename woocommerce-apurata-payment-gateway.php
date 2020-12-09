@@ -124,11 +124,16 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 $this->id = PLUGIN_ID;
 
                 $this->title = __('Cuotas sin tarjeta de crédito - aCuotaz', APURATA_TEXT_DOMAIN);
+                // Get settings, e.g.
+                $this->client_id = $this->get_option( 'client_id' );
+                $this->allow_http = $this->get_option( 'allow_http' );
+                $this->secret_token = $this->get_option( 'secret_token' );
+
                 $this->description = <<<EOF
                     <div id="apurata-pos-steps"></div>
                     <script style="display:none">
                         var r = new XMLHttpRequest();
-                        r.open("GET", "https://apurata.com/pos/info-steps", true);
+                        r.open("GET", "https://apurata.com/pos/{$this->client_id}/info-steps", true);
                         r.onreadystatechange = function () {
                           if (r.readyState != 4 || r.status != 200) return;
                           var elem = document.getElementById("apurata-pos-steps");
@@ -149,11 +154,6 @@ EOF;
 
                 $this->init_form_fields();
                 $this->init_settings();
-
-                // Get settings, e.g.
-                $this->client_id = $this->get_option( 'client_id' );
-                $this->allow_http = $this->get_option( 'allow_http' );
-                $this->secret_token = $this->get_option( 'secret_token' );
 
                 // Init vars used:
                 $this->pay_with_apurata_addon = NULL;
@@ -466,8 +466,8 @@ EOF;
                     return;
                 }
                 if (!in_array($order->get_status(), $conditions)) {
-                    apurata_log('Esta orden no puede ser procesada');
-                    $log = $log . 'Order cannot be processed;';
+                    apurata_log("Orden en estado {$order->get_status()} no puede ser procesada");
+                    $log = $log . "Order in status {$order->get_status()} cannot be processed;";
                     header('Apurata-Log: ' . $log);
                     return;
                 }
