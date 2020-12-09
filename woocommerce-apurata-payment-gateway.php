@@ -32,7 +32,7 @@ $APURATA_DOMAIN = getenv('APURATA_DOMAIN');
 $APURATA_API_DOMAIN = getenv('APURATA_API_DOMAIN');
 
 if ($APURATA_DOMAIN == false) {
-    $APURATA_DOMAIN = 'http://localhost:8000'; //'https://apurata.com';
+    $APURATA_DOMAIN = 'https://apurata.com';
 }
 if ($APURATA_API_DOMAIN == false) {
     $APURATA_API_DOMAIN = $APURATA_DOMAIN;
@@ -431,6 +431,8 @@ EOF;
 
                 $order = wc_get_order( $order_id );
 
+                $conditions = array('pending', 'onhold', 'failed');
+
                 if (!$order) {
                     apurata_log('Orden no encontrada: ' . $order_id);
                     $log = $log . "Order not found;";
@@ -463,28 +465,27 @@ EOF;
                     http_response_code(401);
                     return;
                 }
-                $conditions =array('pending', 'onhold','failed');
-                if(!in_array( $order->get_status(),$conditions)) {
+                if (!in_array($order->get_status(), $conditions)) {
                     apurata_log('Esta orden no puede ser procesada');
-                    $log = $log . "Order cannot be processed;";
+                    $log = $log . 'Order cannot be processed;';
                     header('Apurata-Log: ' . $log);
-                    return ;
+                    return;
                 }
                 $log = $log . "Success auth;";
-                switch($event){
+                switch ($event) {
                     case 'onhold':
                         // Collateral effect: empty cart and don't allow to choose a different payment method
                         $order->update_status('on-hold', __( 'aCuotaz puso la orden en onhold', APURATA_TEXT_DOMAIN ));
-                    break;
+                        break;
                     case 'validated':
                         $order->add_order_note( __( 'aCuotaz validó identidad', APURATA_TEXT_DOMAIN ) );
-                    break;
+                        break;
                     case 'rejected':
                         $order->update_status('failed', __( 'aCuotaz rechazó la orden', APURATA_TEXT_DOMAIN ));
-                    break;
+                        break;
                     case 'canceled':
                         $order->update_status('failed', __( 'El financiamiento en aCuotaz fue cancelado', APURATA_TEXT_DOMAIN ));
-                    break;
+                        break;
                     case 'funded':
                         if ($_GET["transaction_id"]) {
                             $msg = __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar con transaction_id=' . $_GET["transaction_id"], APURATA_TEXT_DOMAIN );
@@ -493,17 +494,17 @@ EOF;
                             $msg = __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar', APURATA_TEXT_DOMAIN );
                         }
                         $order->update_status('processing', $msg);
-                    break;
+                        break;
                     case 'approved':
                         $order->add_order_note( __( 'Crédito aprobado', APURATA_TEXT_DOMAIN ) );
                         apurata_log('Evento ignorado: ' . $event);
                         $log = $log . "Ignored event " . $event . ";";
-                    break;
+                        break;
                     default:
                         $order->add_order_note( __( 'Ignorado evento enviado por aCuotaz: ' . $event, APURATA_TEXT_DOMAIN ) );
                         apurata_log('Evento ignorado: ' . $event);
                         $log = $log . "Ignored event " . $event . ";";
-                    break;
+                        break;
                 }
                 $log = $log . "Done;";
                 header('Apurata-Log: ' . $log);
