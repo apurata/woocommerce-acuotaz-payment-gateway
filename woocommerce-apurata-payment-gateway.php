@@ -124,11 +124,16 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 $this->id = PLUGIN_ID;
 
                 $this->title = __('Cuotas sin tarjeta de crédito - aCuotaz', APURATA_TEXT_DOMAIN);
+                // Get settings, e.g.
+                $this->client_id = $this->get_option( 'client_id' );
+                $this->allow_http = $this->get_option( 'allow_http' );
+                $this->secret_token = $this->get_option( 'secret_token' );
+
                 $this->description = <<<EOF
                     <div id="apurata-pos-steps"></div>
                     <script style="display:none">
                         var r = new XMLHttpRequest();
-                        r.open("GET", "https://apurata.com/pos/info-steps", true);
+                        r.open("GET", "https://apurata.com/pos/{$this->client_id}/info-steps", true);
                         r.onreadystatechange = function () {
                           if (r.readyState != 4 || r.status != 200) return;
                           var elem = document.getElementById("apurata-pos-steps");
@@ -149,11 +154,6 @@ EOF;
 
                 $this->init_form_fields();
                 $this->init_settings();
-
-                // Get settings, e.g.
-                $this->client_id = $this->get_option( 'client_id' );
-                $this->allow_http = $this->get_option( 'allow_http' );
-                $this->secret_token = $this->get_option( 'secret_token' );
 
                 // Init vars used:
                 $this->pay_with_apurata_addon = NULL;
@@ -431,6 +431,8 @@ EOF;
 
                 $order = wc_get_order( $order_id );
 
+                $conditions = array('pending', 'onhold', 'failed');
+
                 if (!$order) {
                     apurata_log('Orden no encontrada: ' . $order_id);
                     $log = $log . "Order not found;";
@@ -463,36 +465,47 @@ EOF;
                     http_response_code(401);
                     return;
                 }
-
-                $log = $log . "Success auth;";
-
-                if ($event == 'onhold') {
-                    // Collateral effect: empty cart and don't allow to choose a different payment method
-                    $order->update_status('on-hold', __( 'aCuotaz puso la orden en onhold', APURATA_TEXT_DOMAIN ));
-                } else if ($event == 'validated') {
-                    $order->add_order_note( __( 'aCuotaz validó identidad', APURATA_TEXT_DOMAIN ) );
-                } else if ($event == 'rejected') {
-                    $order->update_status('failed', __( 'aCuotaz rechazó la orden', APURATA_TEXT_DOMAIN ));
-                } else if ($event == 'canceled') {
-                    $order->update_status('failed', __( 'El financiamiento en aCuotaz fue cancelado', APURATA_TEXT_DOMAIN ));
-                } else if ($event == 'funded') {
-                    if ($_GET["transaction_id"]) {
-                        $msg = __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar con transaction_id=' . $_GET["transaction_id"], APURATA_TEXT_DOMAIN );
-                        add_post_meta($order->get_id(), 'acuotaz_transaction_id', $_GET["transaction_id"], TRUE);
-                    } else {
-                        $msg = __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar', APURATA_TEXT_DOMAIN );
-                    }
-                    $order->update_status('processing', $msg);
-                } else if($event == 'approved') {
-                    $order->add_order_note( __( 'Crédito aprobado', APURATA_TEXT_DOMAIN ) );
-                    apurata_log('Evento ignorado: ' . $event);
-                    $log = $log . "Ignored event " . $event . ";";
-                } else {
-                    $order->add_order_note( __( 'Ignorado evento enviado por aCuotaz: ' . $event, APURATA_TEXT_DOMAIN ) );
-                    apurata_log('Evento ignorado: ' . $event);
-                    $log = $log . "Ignored event " . $event . ";";
+                if (!in_array($order->get_status(), $conditions)) {
+                    apurata_log("Orden en estado {$order->get_status()} no puede ser procesada");
+                    $log = $log . "Order in status {$order->get_status()} cannot be processed;";
+                    header('Apurata-Log: ' . $log);
+                    return;
                 }
-
+                $log = $log . "Success auth;";
+                switch ($event) {
+                    case 'onhold':
+                        // Collateral effect: empty cart and don't allow to choose a different payment method
+                        $order->update_status('on-hold', __( 'aCuotaz puso la orden en onhold', APURATA_TEXT_DOMAIN ));
+                        break;
+                    case 'validated':
+                        $order->add_order_note( __( 'aCuotaz validó identidad', APURATA_TEXT_DOMAIN ) );
+                        break;
+                    case 'rejected':
+                        $order->update_status('failed', __( 'aCuotaz rechazó la orden', APURATA_TEXT_DOMAIN ));
+                        break;
+                    case 'canceled':
+                        $order->update_status('failed', __( 'El financiamiento en aCuotaz fue cancelado', APURATA_TEXT_DOMAIN ));
+                        break;
+                    case 'funded':
+                        if ($_GET["transaction_id"]) {
+                            $msg = __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar con transaction_id=' . $_GET["transaction_id"], APURATA_TEXT_DOMAIN );
+                            add_post_meta($order->get_id(), 'acuotaz_transaction_id', $_GET["transaction_id"], TRUE);
+                        } else {
+                            $msg = __( 'aCuotaz notifica que esta orden fue pagada y ya se puede entregar', APURATA_TEXT_DOMAIN );
+                        }
+                        $order->update_status('processing', $msg);
+                        break;
+                    case 'approved':
+                        $order->add_order_note( __( 'Crédito aprobado', APURATA_TEXT_DOMAIN ) );
+                        apurata_log('Evento ignorado: ' . $event);
+                        $log = $log . "Ignored event " . $event . ";";
+                        break;
+                    default:
+                        $order->add_order_note( __( 'Ignorado evento enviado por aCuotaz: ' . $event, APURATA_TEXT_DOMAIN ) );
+                        apurata_log('Evento ignorado: ' . $event);
+                        $log = $log . "Ignored event " . $event . ";";
+                        break;
+                }
                 $log = $log . "Done;";
                 header('Apurata-Log: ' . $log);
                 return;
