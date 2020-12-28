@@ -115,32 +115,32 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $apurata_gateway->gen_pay_with_apurata_html("cart");
     }
     // End of Display on each shop item "Págalo en cuotas con Apurata"
-    add_action( 'rest_api_init', function () {
-        register_rest_route( 'apurata', '/order-state/(?P<id>\d+)', array(
+    add_action('rest_api_init', function () {
+        register_rest_route('apurata', '/order-state/(?P<id>\d+)', array(
           'methods' => 'GET',
-          'callback' => 'send_state_func',
+          'callback' => 'send_state_func'
         ) );
     } );
-    function send_state_func( $data ) {
-        $order_id=$data['id'];
-        $order = wc_get_order( $order_id );
-        $auth=$data->get_header('Apurata-Auth');
+
+    function send_state_func($data) {
+        $order_id = $data['id'];
+        $order = wc_get_order($order_id);
+        $auth = $data->get_header('Apurata-Auth');
         if (!$auth) {
-            return new WP_Error( 'authorization_required', 'Missing authorization header', array( 'status' => 401 ) );
+            return new WP_Error('authorization_required', 'Missing authorization header', array('status' => 401));
         }
         list($auth_type, $token) = explode(' ', $auth);
         if (strtolower($auth_type) != 'bearer') {
-            return new WP_Error( 'authorization_required', 'Invalid authorization type', array( 'status' => 401 ) );
+            return new WP_Error('authorization_required', 'Invalid authorization type', array('status' => 401));
         }
         $apurata_gateway = new WC_Apurata_Payment_Gateway();
         if ($token != $apurata_gateway->secret_token) {
-            return new WP_Error( 'authorization_required', 'Invalid authorization token', array( 'status' => 401 ) );
+            return new WP_Error('authorization_required', 'Invalid authorization token', array('status' => 401 ));
         }
         if (!$order) {
-            return new WP_Error( 'not_found', 'Order: ' . $order_id . ' not found', array( 'status' => 404 ) );
+            return new WP_Error('not_found', 'Order: ' . $order_id . ' not found', array('status' => 404 ));
         }
         $order_status = $order->get_status();
-        // STATUS ('pending', 'onhold', 'failed','Pending payment', 'Refunded' | 'Processing', 'Completed' | 'Canceled')
         switch ($order_status) {
             case 'cancelled':
             case 'failed':
