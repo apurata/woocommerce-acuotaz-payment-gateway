@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.2.7
+ * Version:           0.2.8
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
@@ -115,7 +115,51 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $apurata_gateway->gen_pay_with_apurata_html("cart");
     }
     // End of Display on each shop item "Págalo en cuotas con Apurata"
-
+    add_action( 'rest_api_init', function () {
+        register_rest_route( 'apurata', '/order-state/(?P<id>\d+)', array(
+          'methods' => 'GET',
+          'callback' => 'send_state_func',
+        ) );
+    } );
+    function send_state_func( $data ) {
+        $order_id=$data['id'];
+        $order = wc_get_order( $order_id );
+        $auth=$data->get_header('Apurata-Auth');
+        if (!$auth) {
+            return new WP_Error( 'authorization_required', 'Missing authorization header', array( 'status' => 401 ) );
+        }
+        list($auth_type, $token) = explode(' ', $auth);
+        if (strtolower($auth_type) != 'bearer') {
+            return new WP_Error( 'authorization_required', 'Invalid authorization type', array( 'status' => 401 ) );
+        }
+        $apurata_gateway = new WC_Apurata_Payment_Gateway();
+        if ($token != $apurata_gateway->secret_token) {
+            return new WP_Error( 'authorization_required', 'Invalid authorization token', array( 'status' => 401 ) );
+        }
+        if (!$order) {
+            return new WP_Error( 'not_found', 'Order: ' . $order_id . ' not found', array( 'status' => 404 ) );
+        }
+        $order_status = $order->get_status();
+        // STATUS ('pending', 'onhold', 'failed','Pending payment', 'Refunded' | 'Processing', 'Completed' | 'Canceled')
+        switch ($order_status) {
+            case 'cancelled':
+            case 'failed':
+            case 'refunded':
+                $order_status = 'cancelled';
+                break;
+            case 'completed':
+            case 'processing':
+                $order_status = 'paid';
+                break;
+            default:
+                $order_status = 'pending';
+        }
+        $order_status = [
+            'order_status' => $order_status
+        ];
+        return new WP_REST_Response($order_status, 200); 
+    }
+    
 
     function init_wc_apurata_payment_gateway() {
         class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway {
