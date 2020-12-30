@@ -154,10 +154,16 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
             default:
                 $order_status = 'pending';
         }
-        $order_status = [
-            'order_status' => $order_status
+        $order = wc_get_order( $order_id );
+        $items = $order->get_items();
+        $data = [
+            'order_status' => $order_status,
         ];
-        return new WP_REST_Response($order_status, 200); 
+        foreach ( $items as $item ) {
+            $product = $item->get_product();
+            $data['stock_quantity'] = $product->get_stock_quantity();
+        }
+        return new WP_REST_Response($data, 200); 
     }
     
 
@@ -221,16 +227,24 @@ EOF;
                     // Don't talk to apurata, the add-on endpoint will run the validations
                     return;
                 }
-
+                global $woocommerce;
                 $url = "/pos/pay-with-apurata-add-on/" . $loan_amount;
 
                 global $wp;
                 $current_url = add_query_arg( $wp->query_vars, home_url( $wp->request ) );
+
+                $number_of_items = $woocommerce->cart->cart_contents_count;
+                
                 $url = add_query_arg( array(
                     'page' => urlencode($page),
                     'continue_url' => urlencode($current_url),
                 ), $url);
-
+                
+                if($page=='cart' && $number_of_items>1) {
+                    $url = add_query_arg( array(
+                        'multiple_products' => urlencode('TRUE'),
+                    ), $url);
+                }
                 global $product;
                 if ($product) {
                     $url = add_query_arg( array(
