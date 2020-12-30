@@ -158,10 +158,20 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $items = $order->get_items();
         $data = [
             'order_status' => $order_status,
+            'stock_status' => 'TRUE',
         ];
-        foreach ( $items as $item ) {
+        foreach ($items as $item) {
             $product = $item->get_product();
-            $data['stock_quantity'] = $product->get_stock_quantity();
+            $stock_quantity = $product->get_stock_quantity();
+            if($stock_quantity && $stock_quantity < $item->get_quantity()) {
+                $data['stock_status'] = 'FALSE';
+            }
+            else {
+                if (!$product->is_in_stock()) {
+                    $data['stock_status'] = 'FALSE';
+                }
+            }
+            
         }
         return new WP_REST_Response($data, 200); 
     }
