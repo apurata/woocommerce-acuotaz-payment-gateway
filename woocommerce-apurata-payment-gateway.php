@@ -168,9 +168,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
             }
             else if (!$product->is_in_stock()) {
                     $data['stock_status'] = 'FALSE';
-            }
-            
-            
+            }     
         }
         return new WP_REST_Response($data, 200); 
     }
