@@ -166,11 +166,10 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
             if($stock_quantity && $stock_quantity < $item->get_quantity()) {
                 $data['stock_status'] = 'FALSE';
             }
-            else {
-                if (!$product->is_in_stock()) {
+            else if (!$product->is_in_stock()) {
                     $data['stock_status'] = 'FALSE';
-                }
             }
+            
             
         }
         return new WP_REST_Response($data, 200); 
