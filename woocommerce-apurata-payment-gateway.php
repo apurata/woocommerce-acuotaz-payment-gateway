@@ -154,7 +154,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
             default:
                 $order_status = 'pending';
         }
-        $order = wc_get_order( $order_id );
+        $order = wc_get_order($order_id);
         $items = $order->get_items();
         $data = [
             'order_status' => $order_status,
