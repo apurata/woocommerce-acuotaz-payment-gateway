@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.2.9
+ * Version:           0.2.7
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
@@ -11,7 +11,8 @@
  * License:           GPL3
  * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain:       woocommerce-apurata-payment-gateway
- *
+
+ 
  * WC requires at least: 3.8.1
  * WC tested up to: 4.5.1
 */
@@ -169,8 +170,37 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         }
         return new WP_REST_Response($data, 200); 
     }
+    /*
+    function prefix_plugin_update_message( $data, $response ) {
+	printf(
+		'<div class="update-message"><p><strong>%s</strong></p></div>',
+		__( 'Version 2.3.4 is a recommended update', 'text-domain' )
+	);
+    }
+    add_action( 'in_plugin_update_message-woocommerce-apurata-payment-gateway/woocommerce-apurata-payment-gateway.php', 'prefix_plugin_update_message', 10, 2 );
+    */
     
-
+    function prefix_plugin_update_message( $data, $response ) {
+        error_log("HOLAAAA------------");
+        if( isset( $data['upgrade_notice'] ) ) {
+            printf(
+                '<div class="update-message">%s</div>',
+                wpautop( $data['upgrade_notice'] )
+            );
+        }
+    }
+    //add_action( 'in_plugin_update_message-woocommerce-apurata-payment-gateway/woocommerce-apurata-payment-gateway.php', 'prefix_plugin_update_message', 10, 2 );
+    
+    global $pagenow;
+    if ( 'plugins.php' === $pagenow )
+    {
+        error_log("ENTRE A LA CONDICION--------------------");
+        // Better update message
+        $file   = basename( __FILE__ );
+        $folder = basename( dirname( __FILE__ ) );
+        $hook = "in_plugin_update_message-{$folder}/{$file}";
+        add_action( $hook, 'prefix_plugin_update_message', 20, 2 );
+    }
     function init_wc_apurata_payment_gateway() {
         class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway {
 
