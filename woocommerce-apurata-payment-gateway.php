@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.2.9
+ * Version:           0.2.5
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
@@ -11,8 +11,7 @@
  * License:           GPL3
  * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain:       woocommerce-apurata-payment-gateway
-
- 
+ *
  * WC requires at least: 3.8.1
  * WC tested up to: 4.5.1
 */
@@ -170,68 +169,13 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         }
         return new WP_REST_Response($data, 200); 
     }
-    /*
-    function prefix_plugin_update_message( $data, $response ) {
-	printf(
-		'<div class="update-message"><p><strong>%s</strong></p></div>',
-		__( 'Version 2.3.4 is a recommended update', 'text-domain' )
-	);
-    }
-    add_action( 'in_plugin_update_message-woocommerce-apurata-payment-gateway/woocommerce-apurata-payment-gateway.php', 'prefix_plugin_update_message', 10, 2 );
-    */
-    /*
-    function prefix_plugin_update_message( $data, $response ) {
-        error_log("HOLAAAA------------");
-        if( isset( $data['upgrade_notice'] ) ) {
-            printf(
-                '<div class="update-message">%s</div>',
-                wpautop( $data['upgrade_notice'] )
-            );
-        }
-    }*/
-    //add_action( 'in_plugin_update_message-woocommerce-apurata-payment-gateway/woocommerce-apurata-payment-gateway.php', 'prefix_plugin_update_message', 10, 2 );
-    /*
-    global $pagenow;
-    if ( 'plugins.php' === $pagenow )
-    {
-        error_log("ENTRE A LA CONDICION--------------------")
-        // Better update message
-        $file   = basename( __FILE__ );
-        $folder = basename( dirname( __FILE__ ) );
-        $hook = "in_plugin_update_message-{$folder}/{$file}";
-        add_action( $hook, 'prefix_plugin_update_message', 20, 2 );
-    }
-    */
-    /*
-    add_filter ('pre_set_site_transient_update_plugins', 'display_transient_update_plugins');
-    //add_filter ('site_transient_update_plugins', 'display_transient_update_plugins');
-    function display_transient_update_plugins($transient)
-    {
-        error_log("AGREGANDO FILTRO");
-        //var_dump($transient);
-        $file   = basename( __FILE__ );
-        $folder = basename( dirname( __FILE__ ) );
-        $plugin_transient = get_site_transient('update_plugins');
-        $a = array(
-            'slug' => 'Andy',
-            'new_version' => '3.0.0',
-            'url' => 'andy pe',
-            'package' => 'www.google.com'
-        );
-        $o = (object) $a;
-        //$plugin_transient->response[$folder.'/'.$file] = $o;
-        //set_site_transient('update_plugins', $plugin_transient);
-        //echo "<br><h1>siguiente linea</h1><br>";
-        //var_dump($transient);
-        $transient->response[$folder.'/'.$file]=$o;
-        return $transient;
-    }
-    */
-    include_once( plugin_dir_path( __FILE__ ) . 'update.php');
-    $updater = new Smashing_Updater( __FILE__ ); // instantiate our class
-    $updater->set_username( 'rayman813' ); // set username
-    $updater->set_repository( 'smashing-plugin' ); // set repo
+    
+    include_once( plugin_dir_path( __FILE__ ) . 'apurata-update.php');
+    $updater = new Apurata_Update( __FILE__ ); // instantiate our class
+    $updater->set_username( 'apurata' ); // set username
+    $updater->set_repository( 'woocommerce-acuotaz-payment-gateway' ); // set repo
     $updater->initialize(); // initialize the updater
+
     function init_wc_apurata_payment_gateway() {
         class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway {
 
