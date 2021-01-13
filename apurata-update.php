@@ -1,5 +1,9 @@
 <?php
-
+function console_log( $data ){
+    echo '<script>';
+    echo 'console.log('. json_encode( $data ) .')';
+    echo '</script>';
+}
 class Apurata_Update {
 
     private $file;
@@ -18,51 +22,65 @@ class Apurata_Update {
 
     private $github_response;
 
-    public function __construct( $file ) {
-
+    public function __construct($file) {
         $this->file = $file;
-
-        add_action( 'admin_init', array( $this, 'set_plugin_properties' ) );
-
+        add_action('admin_init', array($this, 'set_plugin_properties'));
         return $this;
     }
 
     public function set_plugin_properties() {
-        $this->plugin	= get_plugin_data( $this->file );
-        $this->basename = plugin_basename( $this->file );
-        $this->active	= is_plugin_active( $this->basename );
+        $this->plugin = get_plugin_data($this->file);
+        $this->basename = plugin_basename($this->file);
+        $this->active = is_plugin_active($this->basename);
     }
 
-    public function set_username( $username ) {
+    public function set_username($username) {
         $this->username = $username;
     }
 
-    public function set_repository( $repository ) {
+    public function set_repository($repository) {
         $this->repository = $repository;
     }
 
-    public function authorize( $token ) {
+    public function authorize($token) {
         $this->authorize_token = $token;
     }
-
+    
     private function get_repository_info() {
-        if ( is_null( $this->github_response ) ) { 
-            $request_uri = sprintf( 'https://api.github.com/repos/%s/%s/releases', $this->username, $this->repository ); // Build URI
-            error_log("INFORMACION GITHUB : URL:".$request_uri);
-            if( $this->authorize_token ) {
-                $request_uri = add_query_arg( 'access_token', $this->authorize_token, $request_uri ); // Append it
+        if (is_null($this->github_response)) { 
+            $request_uri = sprintf('https://api.github.com/repos/%s/%s/releases', $this->username, $this->repository);
+            if ($this->authorize_token) {
+                $request_uri = add_query_arg('access_token', $this->authorize_token, $request_uri); 
             }
-
-            $response = json_decode( wp_remote_retrieve_body( wp_remote_get( $request_uri ) ), true ); // Get JSON and parse it
+            $response = wp_remote_get($request_uri);
             
-            if( is_array( $response ) ) { // If it is an array
-                $response = current( $response ); // Get the first item
+            $httpCode = wp_remote_retrieve_response_code($response);
+            if ($httpCode != 200) {
+                apurata_log(sprintf('Apurata Github responded with http_code %s at %s', $httpCode, $request_uri));
+                return false;
             }
-            if( $this->authorize_token ) { // Is there an access token?
-                $response['zipball_url'] = add_query_arg( 'access_token', $this->authorize_token, $response['zipball_url'] ); // Update our zip url with token
+            $body_response = json_decode(wp_remote_retrieve_body($response), true);
+            error_log("RESPUESTA");
+            console_log($body_response);
+            if (!$body_response) {
+                apurata_log('Apurata Github response does not contain body');
+                return false;
             }
-
-            $this->github_response = $response; // Set it to our property
+            if(is_array($body_response)) {
+                $body_response = current($body_response);
+            }
+            $required_parameters = array('zipball_url','tag_name');
+            foreach ($required_parameters as $parameter) {
+                if(!isset($body_response[$parameter])){
+                    apurata_log("Apurata Github response does not contain the '" . $parameter . "'parameter.");
+                    return false;
+                }
+            }
+            if ($this->authorize_token) {
+                $body_response['zipball_url'] = add_query_arg('access_token', $this->authorize_token, $body_response['zipball_url']);
+            }
+            $this->github_response = $body_response;
+            return true;
         }
     }
 
@@ -73,55 +91,45 @@ class Apurata_Update {
         error_log("SE INICIO");
     }
 
-    public function modify_transient( $transient ) {
-        error_log("Entre a la funcion");
-        if( property_exists( $transient, 'checked') ) { // Check if transient has a checked property
-            error_log("CHEQUEADO");
-            if( $checked = $transient->checked ) { // Did Wordpress check for updates?
-                $this->get_repository_info(); // Get the repo info
-
-                $out_of_date = version_compare(substr($this->github_response['tag_name'],1), $checked[ $this->basename ], 'gt' ); // Check if we're out of date
-                error_log(substr($this->github_response['tag_name'],1));
-                if( $out_of_date ) {
-                    error_log("SE TIENE Q ACTUALIZAR");
-                    $new_files = $this->github_response['zipball_url']; // Get the ZIP
-
-                    $slug = current( explode('/', $this->basename ) ); // Create valid slug
-                    error_log("URL NUEVO:".$new_files);
-                    
-                    $plugin = array( // setup our plugin info
-                        'url' => $this->plugin["PluginURI"],
-                        'slug' => $slug,
-                        'package' => $new_files,
-                        'new_version' => $this->github_response['tag_name']
-                    );
-                    error_log("NOMBRE BASE: ".$this->basename);
-                    $transient->response[$this->basename] = (object) $plugin; // Return it in response
-                }
+    public function modify_transient($transient) {
+        error_log("SE LLAMO A LA FUNCION");
+        if(property_exists($transient, 'checked') && $checked = $transient->checked) {
+            error_log("ENTRE A LA FUNCION");
+            if (!$this->get_repository_info())
+                return $transient;
+            error_log("OBTUVE LOS DATOS");
+            console_log($checked);
+            $current_version = $checked[$this->basename];
+            $new_version = substr($this->github_response['tag_name'], 1);
+            $out_of_date = version_compare($new_version, $current_version, 'gt');
+            if ($out_of_date) {
+                error_log("ACTUALIZAR");
+                $new_files = $this->github_response['zipball_url'];
+                $slug = current(explode('/', $this->basename) );
+                $plugin = array(
+                    'url' => $this->plugin['PluginURI'],
+                    'slug' => $slug,
+                    'package' => $new_files,
+                    'new_version' => $new_version
+                );
+                $transient->response[$this->basename] = (object)$plugin;
             }
         }
-
         return $transient; 
     }
 
-    public function plugin_popup( $result, $action, $args ) {
+    public function plugin_popup($result, $action, $args) {
         error_log("DETALLES");
-        if( ! empty( $args->slug ) ) { // If there is a slug
-            
-            if( $args->slug == current( explode( '/' , $this->basename ) ) ) { // And it's our slug
-
-                $this->get_repository_info(); // Get our repo info
-
-                // Set it to an array
+        if (!empty($args->slug)) {
+            if ($args->slug == current(explode('/' , $this->basename ))) { 
+                $this->get_repository_info();
+                
                 $plugin = array(
                     'name'				=> $this->plugin["Name"],
                     'slug'				=> $this->basename,
-                    'requires'					=> '3.3',
-                    'tested'						=> '4.4.1',
-                    'rating'						=> '100.0',
-                    'num_ratings'				=> '10823',
-                    'downloaded'				=> '14249',
-                    'added'							=> '2016-01-05',
+                    'requires'			=> '3.3',
+                    'tested'			=> '4.5.1',
+                    'added'				=> '2016-01-05',
                     'version'			=> $this->github_response['tag_name'],
                     'author'			=> $this->plugin["AuthorName"],
                     'author_profile'	=> $this->plugin["AuthorURI"],
@@ -129,30 +137,26 @@ class Apurata_Update {
                     'homepage'			=> $this->plugin["PluginURI"],
                     'short_description' => $this->plugin["Description"],
                     'sections'			=> array(
-                        'Description'	=> $this->plugin["Description"],
-                        'Updates'		=> $this->github_response['body'],
+                        'Description'	    => $this->plugin["Description"],
+                        'Updates'		    => $this->github_response['body'],
                     ),
                     'download_link'		=> $this->github_response['zipball_url']
                 );
-
-                return (object) $plugin; // Return the data
+                return (object) $plugin;
             }
-
         }
-        return $result; // Otherwise return default
+        return $result; 
     }
 
     public function after_install( $response, $hook_extra, $result ) {
-        global $wp_filesystem; // Get global FS object
+        global $wp_filesystem;
         error_log("ACTUALIZACION");
-        $install_directory = plugin_dir_path( $this->file ); // Our plugin directory
-        $wp_filesystem->move( $result['destination'], $install_directory ); // Move files to the plugin dir
-        $result['destination'] = $install_directory; // Set the destination for the rest of the stack
-
-        if ( $this->active ) { // If it was active
-            activate_plugin( $this->basename ); // Reactivate
+        $install_directory = plugin_dir_path( $this->file );
+        $wp_filesystem->move( $result['destination'], $install_directory );
+        $result['destination'] = $install_directory;
+        if ( $this->active ) { 
+            activate_plugin($this->basename);
         }
-
         return $result;
     }
 }
