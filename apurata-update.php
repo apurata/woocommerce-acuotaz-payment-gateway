@@ -1,9 +1,4 @@
 <?php
-function console_log( $data ){
-    echo '<script>';
-    echo 'console.log('. json_encode( $data ) .')';
-    echo '</script>';
-}
 class Apurata_Update {
 
     private $file;
@@ -29,8 +24,8 @@ class Apurata_Update {
     }
 
     public function initialize() {
-        add_filter('pre_set_site_transient_update_plugins', array($this,'modify_transient'), 10, 1 );
-        add_filter('plugins_api', array( $this, 'plugin_popup'), 10, 3);
+        add_filter('pre_set_site_transient_update_plugins', array($this, 'modify_transient'), 10, 1);
+        add_filter('plugins_api', array($this, 'plugin_popup'), 10, 3);
         add_filter('upgrader_post_install', array($this, 'after_install'), 10, 3 );  
     }
 
@@ -81,11 +76,11 @@ class Apurata_Update {
             $tree = $body_response['tree'];
             $necessary_files = array('readme.txt','apurata-update.php','woocommerce-apurata-payment-gateway.php');
             $repository_files = array();
-            foreach($tree as $path){
+            foreach ($tree as $path) {
                 $repository_files[] = $path['path'];
             }
             foreach ($necessary_files as $file) {
-                if (!in_array($file,$repository_files)) {
+                if (!in_array($file, $repository_files)) {
                     apurata_log('Error: The file ' . $file . ' was not found');
                     return false;
                 }
@@ -96,13 +91,13 @@ class Apurata_Update {
     private function get_repository_info() {
         if (is_null($this->github_response)) { 
             $request_uri = $this->make_request_uri('https://api.github.com/repos/%s/%s/releases');
-            if ($body_response = $this->get_github_response($request_uri)){
-                if(is_array($body_response)) {
+            if ($body_response = $this->get_github_response($request_uri)) {
+                if (is_array($body_response)) {
                     $body_response = current($body_response);
                 }
                 $required_parameters = array('zipball_url', 'tag_name', 'published_at');
                 foreach ($required_parameters as $parameter) {
-                    if(!isset($body_response[$parameter])){
+                    if (!isset($body_response[$parameter])) {
                         apurata_log("Apurata Github response does not contain the '" . $parameter . "'parameter.");
                         return false;
                     }
@@ -111,7 +106,7 @@ class Apurata_Update {
                     return false;
                 }
                 if ($this->authorize_token) {
-                    $body_response['zipball_url'] = add_query_arg( array(
+                    $body_response['zipball_url'] = add_query_arg(array(
                         'access_token' => $this->authorize_token
                     ), $body_response['zipball_url']);   
                 }
@@ -125,7 +120,7 @@ class Apurata_Update {
     
 
     public function modify_transient($transient) {
-        if(property_exists($transient, 'checked') && $checked = $transient->checked) {
+        if (property_exists($transient, 'checked') && $checked = $transient->checked) {
             if (!$this->get_repository_info())
                 return $transient;
             $current_version = $checked[$this->basename];
@@ -133,7 +128,7 @@ class Apurata_Update {
             $out_of_date = version_compare($new_version, $current_version, 'gt');
             if ($out_of_date) {
                 $new_files = $this->github_response['zipball_url'];
-                $slug = current(explode('/', $this->basename) );
+                $slug = current(explode('/', $this->basename));
                 $plugin = array(
                     'url' => $this->plugin['PluginURI'],
                     'slug' => $slug,
@@ -148,7 +143,7 @@ class Apurata_Update {
 
     public function plugin_popup($result, $action, $args) { 
         if (!empty($args->slug)) {
-            if ($args->slug == current(explode('/' , $this->basename ))) { 
+            if ($args->slug == current(explode('/' , $this->basename))) { 
                 $plugin = array(
                     'name'				=> $this->plugin['Name'],
                     'slug'				=> $this->basename,
@@ -170,18 +165,18 @@ class Apurata_Update {
                         'download_link'		=> $this->github_response['zipball_url']
                     );
                 }
-                return (object) $plugin;
+                return (object)$plugin;
             }
         }
         return $result; 
     }
 
-    public function after_install( $response, $hook_extra, $result ) {
+    public function after_install($response, $hook_extra, $result) {
         global $wp_filesystem;
         $install_directory = plugin_dir_path( $this->file );
-        $wp_filesystem->move( $result['destination'], $install_directory );
+        $wp_filesystem->move($result['destination'], $install_directory);
         $result['destination'] = $install_directory;
-        if ( $this->active ) { 
+        if ($this->active) { 
             activate_plugin($this->basename);
         }
         return $result;
