@@ -111,6 +111,16 @@ class Apurata_Update {
                         'access_token' => $this->authorize_token
                     ), $body_response['zipball_url']);   
                 }*/
+                if (isset($body_response['assets'])) {
+                    $asset = $body_response['assets'];
+                    if (is_array($asset) && count($asset)) {
+                        $asset = current($asset);
+                        $plugin_name = current(explode('/', $this->basename));
+                        if (isset($asset['name']) && $asset['name'] == $plugin_name . '.zip') {
+                            $body_response['zipball_url'] = $asset['browser_download_url'];
+                        }
+                    }
+                }
                 $this->github_response = $body_response;
                 return true;
             }  
