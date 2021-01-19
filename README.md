@@ -19,7 +19,7 @@ git clone https://github.com/apurata/woocommerce-acuotaz-payment-gateway.git woo
 ```
 sudo chown -R www-data:www-data woocommerce-apurata-payment-gateway
 ```
-- Change the permissions of the folder:
+- Change the permissions:
 ```
 chmod -R g+w woocommerce-apurata-payment-gateway
 ```
