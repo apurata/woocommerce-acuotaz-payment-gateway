@@ -1,24 +1,33 @@
 # Important considerations
 ----
 ## LOCAL
-- To clone repository:
+- To be able to edit the code directly, add your user to the group www-data:
 ```
-git clone https://github.com/repo woocommerce-apurata-payment-gateway
+sudo adduser myuser www-data
 ```
-> Explanation: When you want to add the plugin to wordpress by cloning the repository, you must change the name of the folder from "woocommerce-acuotaz-payment-gateway" to "woocommerce-apurata-payment-gateway"
+> Maybe is necessary close the session to update this change.
+- Add write permission to plugins/ directory:
+```
+sudo chmod g+w plugins/
+```
+- To clone repository in plugins/ directory:
+```
+git clone https://github.com/apurata/woocommerce-acuotaz-payment-gateway.git woocommerce-apurata-payment-gateway
+```
+> When you want to add the plugin to wordpress by cloning the repository, you must change the name of the folder from "woocommerce-acuotaz-payment-gateway" to "woocommerce-apurata-payment-gateway"
 - Change the owner:
 ```
 sudo chown -R www-data:www-data woocommerce-apurata-payment-gateway
 ```
+- Change the permissions of the folder:
+```
+chmod -R g+w woocommerce-apurata-payment-gateway
+```
 ## DEPLOY
-- Verify permissions:
-  - Files:
-  ```
-   sudo find woocommerce-apurata-payment-gateway -type f -exec chmod 644 {} \;
-  ```
-  - Directories:
-  ```
-   sudo find woocommerce-apurata-payment-gateway -type d -exec chmod 755 {} \;
-  ```  
-> Explanation: File permissions must be 644 and folders 755.
+- Run the "create_release.sh" script.
+- Draft a new release.
+- The tag name, must start with "v". Like past releases.
+- Write a correct documentation ( This will show in wordpress).
+- Add the file woocommerce-apurata-payment-gateway.zip.
+- Publish new release.
 
