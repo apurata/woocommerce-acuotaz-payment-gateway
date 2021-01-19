@@ -13,12 +13,12 @@ sudo chown -R www-data:www-data woocommerce-apurata-payment-gateway
 ## DEPLOY
 - Verify permissions:
   - Files:
-```
- sudo find woocommerce-apurata-payment-gateway -type f -exec chmod 644 {} \;
-```
+  ```
+   sudo find woocommerce-apurata-payment-gateway -type f -exec chmod 644 {} \;
+  ```
   - Directories:
-```
- sudo find woocommerce-apurata-payment-gateway -type d -exec chmod 755 {} \;
-```  
+  ```
+   sudo find woocommerce-apurata-payment-gateway -type d -exec chmod 755 {} \;
+  ```  
 > Explanation: File permissions must be 644 and folders 755.
 
