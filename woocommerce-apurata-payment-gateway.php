@@ -46,7 +46,6 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
     add_action('plugins_loaded', 'init_apurata');
     function apurata_log($message) {
-        console_log("apurata_log".$message);
         if (getenv('APURATA_DEBUG')) {
             error_log($message);
         }
