@@ -53,10 +53,11 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
     }
 }
 function init_apurata() {
-    include_once(plugin_dir_path(__FILE__) . 'apurata-external-hooks.php');
-    include_once(plugin_dir_path(__FILE__) . 'apurata-payment-gateway.php');
-    include_once(plugin_dir_path(__FILE__) . 'apurata-api.php');
-    include_once(plugin_dir_path(__FILE__) . 'apurata-update.php');
+    $plugin_dir_path = plugin_dir_path(__FILE__) . 'includes/';
+    include_once($plugin_dir_path . 'apurata-external-hooks.php');
+    include_once($plugin_dir_path . 'apurata-payment-gateway.php');
+    include_once($plugin_dir_path . 'apurata-api.php');
+    include_once($plugin_dir_path . 'apurata-update.php');
 
     $WC_apurata_external_hooks  = new WC_Apurata_External_Hooks();
     $WC_apurata_external_hooks->init_hooks();
