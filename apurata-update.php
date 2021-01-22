@@ -1,5 +1,5 @@
 <?php
-class Apurata_Update {
+class WC_Apurata_Update {
 
     private $file;
     private $plugin;
@@ -23,7 +23,7 @@ class Apurata_Update {
         //"plugin popup" show the details of the plugin and new version.
         add_filter('plugins_api', array($this, 'plugin_popup'), 10, 3);
         //"after_install" activate the plugin again.
-        add_filter('upgrader_post_install', array($this, 'after_install'), 10, 3 );  
+        add_filter('upgrader_post_install', array($this, 'after_install'), 10, 3 );
     }
 
     public function set_plugin_properties() {
@@ -43,7 +43,7 @@ class Apurata_Update {
     public function set_repository_id($repository_id) {
         $this->repository_id = $repository_id;
     }
-    
+
     public function authorize($token) {
         $this->authorize_token = $token;
     }
@@ -54,7 +54,7 @@ class Apurata_Update {
         if ($this->authorize_token) {
             $request_uri = add_query_arg(array(
                 'access_token' => $this->authorize_token
-            ), $request_uri); 
+            ), $request_uri);
         }*/
         $response = wp_remote_get($request_uri, array('timeout'=>2));
         $httpCode = wp_remote_retrieve_response_code($response);
@@ -66,9 +66,10 @@ class Apurata_Update {
         if (!$body_response) {
             apurata_log($this->username . ' Github response does not contain body');
             return false;
-        }  
+        }
         return $body_response;
     }
+
     private function check_repository_files() {
         $request_uri = sprintf('https://api.github.com/repos/%s/%s/git/trees/master?recursive=1', $this->username, $this->repository);
         if ($body_response = $this->get_github_response($request_uri)) {
@@ -88,7 +89,7 @@ class Apurata_Update {
         }
     }
     private function get_repository_info() {
-        if (is_null($this->github_response)) { 
+        if (is_null($this->github_response)) {
             $request_uri = sprintf('https://api.github.com/repositories/%s/releases', $this->repository_id);
             if ($body_response = $this->get_github_response($request_uri)) {
                 if (is_array($body_response)) {
@@ -109,7 +110,7 @@ class Apurata_Update {
                 if ($this->authorize_token) {
                     $body_response['zipball_url'] = add_query_arg(array(
                         'access_token' => $this->authorize_token
-                    ), $body_response['zipball_url']);   
+                    ), $body_response['zipball_url']);
                 }*/
                 if (isset($body_response['assets'])) {
                     $asset = $body_response['assets'];
@@ -123,7 +124,7 @@ class Apurata_Update {
                 }
                 $this->github_response = $body_response;
                 return true;
-            }  
+            }
         }
         return false;
     }
@@ -147,12 +148,12 @@ class Apurata_Update {
                 $transient->response[$this->basename] = (object)$plugin;
             }
         }
-        return $transient; 
+        return $transient;
     }
 
-    public function plugin_popup($result, $action, $args) { 
+    public function plugin_popup($result, $action, $args) {
         if (!empty($args->slug)) {
-            if ($args->slug == current(explode('/' , $this->basename))) { 
+            if ($args->slug == current(explode('/' , $this->basename))) {
                 $plugin = array(
                     'name'				=> $this->plugin['Name'],
                     'slug'				=> $this->basename,
@@ -177,7 +178,7 @@ class Apurata_Update {
                 return (object)$plugin;
             }
         }
-        return $result; 
+        return $result;
     }
 
     public function after_install($response, $hook_extra, $result) {
@@ -185,7 +186,7 @@ class Apurata_Update {
         $install_directory = plugin_dir_path( $this->file );
         $wp_filesystem->move($result['destination'], $install_directory);
         $result['destination'] = $install_directory;
-        if ($this->active) { 
+        if ($this->active) {
             activate_plugin($this->basename);
         }
         return $result;
