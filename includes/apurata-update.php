@@ -74,7 +74,7 @@ class WC_Apurata_Update {
         $request_uri = sprintf('https://api.github.com/repos/%s/%s/git/trees/master?recursive=1', $this->username, $this->repository);
         if ($body_response = $this->get_github_response($request_uri)) {
             $tree = $body_response['tree'];
-            $necessary_files = array('readme.txt','apurata-update.php','woocommerce-apurata-payment-gateway.php');
+            $necessary_files = array('readme.txt','woocommerce-apurata-payment-gateway.php');
             $repository_files = array();
             foreach ($tree as $path) {
                 $repository_files[] = $path['path'];
