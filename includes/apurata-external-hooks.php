@@ -10,6 +10,7 @@ class WC_Apurata_External_Hooks{
         // See: https://www.businessbloomer.com/woocommerce-visual-hook-guide-checkout-page/
         add_action('woocommerce_review_order_before_payment', array($this, 'on_proceed_to_checkout'), 15);
         add_filter('woocommerce_payment_gateways', array($this, 'add_wc_apurata_payment_gateway'));
+        add_action('wp_head', array($this, 'add_facebook_pixel'));
     }
 
     private function update_pos_client_context() {
@@ -72,5 +73,37 @@ class WC_Apurata_External_Hooks{
         return $methods;
     }
 
+    public function add_facebook_pixel(){
+        ?>
+        <script>
+        !function(f,b,e,v,n,t,s){
+            if(f.fbq)return;
+            n=f.fbq=function(){
+                n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)
+            };
+            if(!f._fbq)f._fbq=n;
+            n.push=n;
+            n.loaded=!0;
+            n.version='2.0';
+            n.queue=[];
+            t=b.createElement(e);
+            t.async=!0;
+            t.src=v;
+            s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)
+        }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '181284105708138');
+        fbq('track', 'PageView');
+        </script>
+        <noscript>
+            <img
+                height="1"
+                width="1"
+                style="display:none"
+                src="https://www.facebook.com/tr?id=181284105708138&ev=PageView&noscript=1"
+            />
+        </noscript>
+        <?php
+    }
 }
 ?>
