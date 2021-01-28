@@ -75,7 +75,7 @@ class WC_Apurata_External_Hooks{
 
     public function add_apurata_script(){
         $apurata_gateway = new WC_Apurata_Payment_Gateway();
-        list ($httpCode, $script) = $apurata_gateway->make_curl_to_apurata('GET','/static/pixelFB.txt');
+        list ($httpCode, $script) = $apurata_gateway->make_curl_to_apurata('GET','/pixelFB.txt', null, false, 'static');
         if ($httpCode == 200 ) {
             echo $script;
         }
