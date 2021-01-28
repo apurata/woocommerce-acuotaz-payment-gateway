@@ -72,6 +72,5 @@ function init_apurata() {
     $WC_apurata_update->set_repository('woocommerce-acuotaz-payment-gateway');
     $WC_apurata_update->set_repository_id('282327960');
     $WC_apurata_update->initialize();
-
 }
 ?>
