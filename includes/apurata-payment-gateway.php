@@ -111,14 +111,11 @@ EOF;
         // If data is present, send it via JSON
         global $APURATA_API_DOMAIN;
         $domain = $APURATA_API_DOMAIN;
-        error_log('********'.$subdomain);
         if ($subdomain) {
-            error_log("ENTRE A LA FUNCION");
             $domain = str_replace("apurata", $subdomain . '.apurata', $domain);
         }
         $ch = curl_init();
         $url = $domain . $path;
-        error_log('---------------'.$domain.'------'.$url);
         curl_setopt($ch, CURLOPT_URL, $url);
         // Timeouts
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);    // seconds
