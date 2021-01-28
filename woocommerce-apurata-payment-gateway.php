@@ -18,6 +18,7 @@
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
 const APURATA_TEXT_DOMAIN = 'woocommerce-apurata-payment-gateway';
+const APURATA_STATIC_DOMAIN = 'https://static.apurata.com';
 const PLUGIN_ID = 'apurata';
 
 // DEVELOPMENT ONLY: UNCOMMENT TO DISPLAY ERRORS IN HTML

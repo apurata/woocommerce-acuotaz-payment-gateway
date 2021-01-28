@@ -74,16 +74,15 @@ class WC_Apurata_External_Hooks{
     }
 
     public function add_apurata_script(){
-        $apurata_gateway = new WC_Apurata_Payment_Gateway();
-        list ($httpCode, $script) = $apurata_gateway->make_curl_to_apurata(
-            'GET',
-            '/vendor/pixels/apurata-pixel.txt',
-            null,
-            false,
-            'static'
-        );
-        if ($httpCode == 200) {
-            echo $script;
+        $path = '/vendor/pixels/apurata-pixel.txt';
+        $request_uri = APURATA_STATIC_DOMAIN . $path;
+        $response = wp_remote_get($request_uri, array('timeout'=>2));
+        $httpCode = wp_remote_retrieve_response_code($response);
+        if ($httpCode != 200) {
+            apurata_log(sprintf('Apurata responded with http_code %s', $httpCode));
+        }
+        else{
+            echo $response['body'];
         }
     }
 }

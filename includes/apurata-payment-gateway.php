@@ -105,17 +105,13 @@ EOF;
         echo($this->pay_with_apurata_addon);
     }
 
-    public function make_curl_to_apurata($method, $path, $data=null, $fire_and_forget=false, $subdomain=false) {
+    public function make_curl_to_apurata($method, $path, $data=null, $fire_and_forget=false) {
         // $method: "GET" or "POST"
         // $path: e.g. /pos/client/landing_config
         // If data is present, send it via JSON
         global $APURATA_API_DOMAIN;
-        $domain = $APURATA_API_DOMAIN;
-        if ($subdomain) {
-            $domain = str_replace("apurata", $subdomain . '.apurata', $domain);
-        }
         $ch = curl_init();
-        $url = $domain . $path;
+        $url = $APURATA_API_DOMAIN . $path;
         curl_setopt($ch, CURLOPT_URL, $url);
         // Timeouts
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);    // seconds
