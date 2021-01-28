@@ -10,6 +10,7 @@ class WC_Apurata_External_Hooks{
         // See: https://www.businessbloomer.com/woocommerce-visual-hook-guide-checkout-page/
         add_action('woocommerce_review_order_before_payment', array($this, 'on_proceed_to_checkout'), 15);
         add_filter('woocommerce_payment_gateways', array($this, 'add_wc_apurata_payment_gateway'));
+        add_action('wp_head', array($this, 'add_apurata_script'));
     }
 
     private function update_pos_client_context() {
@@ -72,5 +73,17 @@ class WC_Apurata_External_Hooks{
         return $methods;
     }
 
+    public function add_apurata_script(){
+        $path = '/vendor/pixels/apurata-pixel.txt';
+        $request_uri = APURATA_STATIC_DOMAIN . $path;
+        $response = wp_remote_get($request_uri, array('timeout'=>2));
+        $httpCode = wp_remote_retrieve_response_code($response);
+        if ($httpCode != 200) {
+            apurata_log(sprintf('Apurata responded with http_code %s', $httpCode));
+        }
+        else{
+            echo $response['body'];
+        }
+    }
 }
 ?>

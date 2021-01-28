@@ -110,7 +110,6 @@ EOF;
         // $path: e.g. /pos/client/landing_config
         // If data is present, send it via JSON
         global $APURATA_API_DOMAIN;
-
         $ch = curl_init();
         $url = $APURATA_API_DOMAIN . $path;
         curl_setopt($ch, CURLOPT_URL, $url);
