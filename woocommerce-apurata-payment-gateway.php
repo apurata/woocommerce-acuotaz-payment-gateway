@@ -5,7 +5,7 @@
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
  * Requires at least: 5.3.2
- * Requires PHP:      7.0.25
+ * Requires PHP:      5
  * Author:            Apurata
  * Author URI:        https://apurata.com/app
  * License:           GPL3
