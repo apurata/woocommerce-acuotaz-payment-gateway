@@ -168,10 +168,14 @@ EOF;
         $currency = get_woocommerce_currency();
 
         // See https://www.designcise.com/web/tutorial/how-to-check-for-https-request-in-php
-        $isHttps = null;
-        $isHttps = isset($_SERVER['HTTPS']) ||
-            isset($_SERVER['REQUEST_SCHEME']) ||
-            isset($_SERVER['HTTP_X_FORWARDED_PROTO']);
+        if (isset($_SERVER['HTTPS']))
+            $isHttps = $_SERVER['HTTPS'];
+        else if (isset($_SERVER['REQUEST_SCHEME']))
+            $isHttps = $_SERVER['REQUEST_SCHEME'];
+        else if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']))
+            $isHttps = $_SERVER['HTTP_X_FORWARDED_PROTO'];
+        else
+            $isHttps = null;
         /* Up to php7.2
         $isHttps =
             $_SERVER['HTTPS']
