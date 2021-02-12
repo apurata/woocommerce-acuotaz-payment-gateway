@@ -163,18 +163,23 @@ EOF;
         return $this->landing_config;
     }
 
-    private function should_hide_apurata_gateway(bool $talkToApurata = true) {
+    private function should_hide_apurata_gateway($talkToApurata) {
         /* Hide Apurata gateway based on some conditions. */
         $currency = get_woocommerce_currency();
 
         // See https://www.designcise.com/web/tutorial/how-to-check-for-https-request-in-php
+        $isHttps = null;
+        $isHttps = isset($_SERVER['HTTPS']) ||
+            isset($_SERVER['REQUEST_SCHEME']) ||
+            isset($_SERVER['HTTP_X_FORWARDED_PROTO']);
+        /* Up to php7.2
         $isHttps =
             $_SERVER['HTTPS']
             ?? $_SERVER['REQUEST_SCHEME']
             ?? $_SERVER['HTTP_X_FORWARDED_PROTO']
             ?? null
         ;
-
+        */
         $isHttps =
             $isHttps && (
                 strcasecmp('on', $isHttps) == 0
@@ -209,7 +214,7 @@ EOF;
     }
 
     public function is_available() {
-        return !$this->should_hide_apurata_gateway();
+        return !$this->should_hide_apurata_gateway(true);
     }
 
     public function init_form_fields() {
