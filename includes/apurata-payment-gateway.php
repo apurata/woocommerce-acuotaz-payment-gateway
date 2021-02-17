@@ -3,7 +3,6 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway {
 
     public function __construct() {
         $this->id = PLUGIN_ID;
-
         $this->title = __('Cuotas sin tarjeta de crédito - aCuotaz', APURATA_TEXT_DOMAIN);
         // Get settings, e.g.
         $this->client_id = $this->get_option('client_id');

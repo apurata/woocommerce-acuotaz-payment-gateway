@@ -81,7 +81,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             include_once($plugin_dir_path . 'apurata-api.php');
             include_once($plugin_dir_path . 'apurata-update.php');
         } catch (Throwable $e){
-            send_error($e,"Compilation problems with aCuotaz");
+            send_error($e,"aCuotaz dejo de funcionar debido a problemas de compilacion.Contáctanos!");
             /*
             try{
                 deactivate_plugins(plugin_basename(__FILE__));
@@ -93,19 +93,19 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         }
 
         try{
-            $WC_apurata_external_hooks  = new WC_Apurata_External_Hooks();
+            $WC_apurata_external_hooks  = new WC_Apurata_External_Hooks(__FILE__);
             $WC_apurata_external_hooks->init_hooks();
             $WC_apurata_payment_gateway = new WC_Apurata_Payment_Gateway();
             $WC_apurata_payment_gateway->init_hooks();
         } catch (Throwable $e){
-            send_error($e,"Apurata Payment cannot start");
+            send_error($e,"No se pudo iniciar aCuotaz Payment,no se mostrará como metodo de pago.Contáctanos!");
         }
 
         try{
             $WC_apurata_API = new WC_Apurata_API();
             $WC_apurata_API->init_hooks();
         } catch (Throwable $e){
-            send_error($e,"Apurata API cannot start");
+            send_error($e,"No se pudo iniciar aCuotaz API,no podremos conocer el estado de una orden.Contáctanos!");
         }
 
         try{
@@ -115,7 +115,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             $WC_apurata_update->set_repository_id('282327960');
             $WC_apurata_update->initialize();
         } catch (Throwable $e){
-            send_error($e,"Apurata Autoupdate cannot start");
+            send_error($e,"No se pudo iniciar aCuotaz Autoupdate,no podra realizar actualizaciones.Contáctanos!");
         }
     }
 }
