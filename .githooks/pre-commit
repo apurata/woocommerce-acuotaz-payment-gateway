@@ -1,4 +1,16 @@
-#!/bin/sh
+#!/bin/bash
+
+#CHECK PHP5 SYNTAX
+FILES=`find . -type f -name "*.php" -print`
+for file in $FILES; do
+	PHP_CHECK=`php -l "$file"`;
+	if [[ "$PHP_CHECK" != *"No syntax errors"* ]]; then
+		printf '\n¡Compatibility errors with PHP5! Correct them to commit.\n';
+		exit 1;
+	fi
+done
+
+#CHECK CHANGE VERSION
 
 ROOT="$(pwd)"
 PLUGIN_FILENAME=woocommerce-apurata-payment-gateway.php
@@ -7,10 +19,11 @@ PLUGIN_FILE=${ROOT}/woocommerce-apurata-payment-gateway.php
 VERSION_LINE=`sed '3q;d' $PLUGIN_FILE`
 VERSION=`echo "$VERSION_LINE" | tr -s ' ' | cut -d ' ' -f 4`
 VERSION="v${VERSION}"
-
 LAST_GIT_VERSION=`git describe --abbrev=0 --tags`;
 
 if [ "$VERSION" = "$LAST_GIT_VERSION" ]; then
     echo "Update the plugin version. To continue without a new version run: git commit --no-verify";
     exit 1;
 fi
+
+
