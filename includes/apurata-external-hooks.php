@@ -1,5 +1,8 @@
 <?php
 class WC_Apurata_External_Hooks{
+    public function __construct($file) {
+        $this->file = $file;
+    }
     public function init_hooks() {
         add_filter('plugin_action_links_' . WC_APURATA_BASENAME, array($this,'wc_apurata_add_settings_link_on_plugin_page'));
         // Display on each shop item "Págalo en cuotas con Apurata"
@@ -25,7 +28,7 @@ class WC_Apurata_External_Hooks{
                 "php_version"         => PHP_VERSION,
                 "wordpress_version"   => $wp_version,
                 "woocommerce_version" => WC_VERSION,
-                "wc_acuotaz_version"  => get_plugin_data(__FILE__)['Version'],
+                "wc_acuotaz_version"  => get_plugin_data($this->file)['Version'],
             ), TRUE);
         }
     }

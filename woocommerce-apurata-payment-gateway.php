@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.3.1
+ * Version:           0.3.2
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
@@ -46,32 +46,77 @@ if (!defined('WC_APURATA_BASENAME')) {
 if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
 
     add_action('plugins_loaded', 'init_apurata');
+
     function apurata_log($message) {
         if (getenv('APURATA_DEBUG')) {
             error_log($message);
         }
     }
-}
-function init_apurata() {
-    $plugin_dir_path = plugin_dir_path(__FILE__) . 'includes/';
-    include_once($plugin_dir_path . 'apurata-external-hooks.php');
-    include_once($plugin_dir_path . 'apurata-payment-gateway.php');
-    include_once($plugin_dir_path . 'apurata-api.php');
-    include_once($plugin_dir_path . 'apurata-update.php');
 
-    $WC_apurata_external_hooks  = new WC_Apurata_External_Hooks();
-    $WC_apurata_external_hooks->init_hooks();
+    function send_error($error,$message){
+        error_log(sprintf("%s: %s in file : %s line: %s",
+            $message,
+            $error->getMessage(),
+            $error->getFile(),
+            $error->getLine()
+        ));
+        add_action('admin_notices', function() use ( $message ) {
+            ?>
+            <div class="notice notice-error is-dismissible">
+            <div style="float: left">
+                <img style="transform:scale(0.8); margin:3px 5px 0px 0px;display: block" src="https://static.apurata.com/img/logo-dark-aCuotaz.svg" alt="aCuotaz">
+            </div>
+                <p><?php _e($message, 'sample-text-domain' ); ?></p>
+            </div>
+            <?php
+        });
+    }
 
-    $WC_apurata_API = new WC_Apurata_API();
-    $WC_apurata_API->init_hooks();
+    function init_apurata() {
+        $plugin_dir_path = plugin_dir_path(__FILE__) . 'includes/';
+        try{
+            require_once(ABSPATH . 'wp-admin/includes/plugin.php');
+            include_once($plugin_dir_path . 'apurata-external-hooks.php');
+            include_once($plugin_dir_path . 'apurata-payment-gateway.php');
+            include_once($plugin_dir_path . 'apurata-api.php');
+            include_once($plugin_dir_path . 'apurata-update.php');
+        } catch (Throwable $e){
+            send_error($e,"aCuotaz dejo de funcionar debido a problemas de compilacion.Contáctanos!");
+            /*
+            try{
+                deactivate_plugins(plugin_basename(__FILE__));
+            } catch (Throwable $e){
+                send_error($e,"aCuotaz cannot deactivate");
+            }
+            */
+            return;
+        }
 
-    $WC_apurata_payment_gateway = new WC_Apurata_Payment_Gateway();
-    $WC_apurata_payment_gateway->init_hooks();
+        try{
+            $WC_apurata_external_hooks  = new WC_Apurata_External_Hooks(__FILE__);
+            $WC_apurata_external_hooks->init_hooks();
+            $WC_apurata_payment_gateway = new WC_Apurata_Payment_Gateway();
+            $WC_apurata_payment_gateway->init_hooks();
+        } catch (Throwable $e){
+            send_error($e,"No se pudo iniciar aCuotaz Payment,no se mostrará como metodo de pago.Contáctanos!");
+        }
 
-    $WC_apurata_update = new WC_Apurata_Update(__FILE__);
-    $WC_apurata_update->set_username('apurata');
-    $WC_apurata_update->set_repository('woocommerce-acuotaz-payment-gateway');
-    $WC_apurata_update->set_repository_id('282327960');
-    $WC_apurata_update->initialize();
+        try{
+            $WC_apurata_API = new WC_Apurata_API();
+            $WC_apurata_API->init_hooks();
+        } catch (Throwable $e){
+            send_error($e,"No se pudo iniciar aCuotaz API,no podremos conocer el estado de una orden.Contáctanos!");
+        }
+
+        try{
+            $WC_apurata_update = new WC_Apurata_Update(__FILE__);
+            $WC_apurata_update->set_username('apurata');
+            $WC_apurata_update->set_repository('woocommerce-acuotaz-payment-gateway');
+            $WC_apurata_update->set_repository_id('282327960');
+            $WC_apurata_update->initialize();
+        } catch (Throwable $e){
+            send_error($e,"No se pudo iniciar aCuotaz Autoupdate,no podra realizar actualizaciones.Contáctanos!");
+        }
+    }
 }
 ?>
