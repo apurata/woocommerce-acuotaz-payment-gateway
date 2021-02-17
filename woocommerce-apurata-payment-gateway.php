@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.3.1
+ * Version:           0.3.2
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
@@ -91,7 +91,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             */
             return;
         }
-        send_error(null,"HOLA");
+
         try{
             $WC_apurata_external_hooks  = new WC_Apurata_External_Hooks();
             $WC_apurata_external_hooks->init_hooks();
