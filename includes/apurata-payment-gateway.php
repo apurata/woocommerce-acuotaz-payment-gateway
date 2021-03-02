@@ -8,7 +8,7 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway {
         $this->client_id = $this->get_option('client_id');
         $this->allow_http = $this->get_option('allow_http');
         $this->secret_token = $this->get_option('secret_token');
-
+        $this->is_dark_theme = $this->get_option('is_dark_theme');
         $this->description = <<<EOF
             <div id="apurata-pos-steps"></div>
             <script style="display:none">
@@ -69,6 +69,7 @@ EOF;
         $url = add_query_arg(array(
             'page' => urlencode($page),
             'continue_url' => urlencode($current_url),
+            'is_dark_theme' => ($this->is_dark_theme == 'no') ? urlencode('FALSE') : urlencode('TRUE')
         ), $url);
         if ($page =='cart' && $number_of_items > 1) {
             $url = add_query_arg(array(
@@ -234,6 +235,13 @@ EOF;
                 'title'   => __('Habilitar HTTP', APURATA_TEXT_DOMAIN),
                 'type'    => 'checkbox',
                 'label'   => __('Habilitar HTTP (no seguro)', APURATA_TEXT_DOMAIN),
+                'default' => 'no'
+            ),
+            'is_dark_theme' => array
+            (
+                'title'   => __('Tema oscuro', APURATA_TEXT_DOMAIN),
+                'type'    => 'checkbox',
+                'label'   => __('Activar en temas de fondo oscuro', APURATA_TEXT_DOMAIN),
                 'default' => 'no'
             ),
             'client_id' => array
