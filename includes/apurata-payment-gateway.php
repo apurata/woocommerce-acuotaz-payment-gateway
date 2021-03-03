@@ -65,11 +65,11 @@ EOF;
 
         $current_url = add_query_arg($wp->query_vars, home_url($wp->request));
         $number_of_items = $woocommerce->cart->cart_contents_count;
-
+        $dark_theme = ($this->is_dark_theme == '' || $this->is_dark_theme == 'no') ? 'FALSE' : 'TRUE';
         $url = add_query_arg(array(
             'page' => urlencode($page),
             'continue_url' => urlencode($current_url),
-            'is_dark_theme' => ($this->is_dark_theme == 'no') ? urlencode('FALSE') : urlencode('TRUE')
+            'is_dark_theme' => urlencode($dark_theme)
         ), $url);
         if ($page =='cart' && $number_of_items > 1) {
             $url = add_query_arg(array(
