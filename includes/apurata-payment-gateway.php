@@ -300,7 +300,7 @@ EOF;
         ), $redirect_url);
 
         // Add dni if it exists
-        $dni = get_post_meta($order->get_id(), "billing_dni", true);
+        $dni = WC()->checkout->get_value($this->get_dni_field_id());
         if ($dni) {
             $redirect_url = add_query_arg(array(
                 'customer_data__dni' => urlencode($dni),
@@ -414,6 +414,19 @@ EOF;
         $log = $log . 'Done;';
         header('Apurata-Log: ' . $log);
         return;
+    }
+    public function get_dni_field_id() {
+        foreach (WC()->checkout()->get_checkout_fields()["billing"] as $key => $value) {
+            if (strpos(strtolower($key), 'dni') !== false) {
+                return $key;
+            }
+            if (strpos(strtolower($value["label"]), 'dni') !== false) {
+                return $key;
+            }
+            if (strpos(strtolower($value["placeholder"]), 'dni') !== false) {
+                return $key;
+            }
+        }
     }
 }
 ?>
