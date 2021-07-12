@@ -39,6 +39,11 @@ EOF;
         // Init vars used:
         $this->pay_with_apurata_addon = null;
         $this->landing_config = null;
+        try{
+            $this->session_id = WC()->session->get_customer_id();
+        }catch(Throwable $e){
+            apurata_log('Error:can not get session_id');
+        }
     }
     public function init_hooks() {
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
@@ -71,6 +76,11 @@ EOF;
             'continue_url' => urlencode($current_url),
             'is_dark_theme' => urlencode($dark_theme)
         ), $url);
+        if ($this->session_id) {
+            $url = add_query_arg(array(
+                'user__session_id' => urlencode((string) $this->session_id)
+            ), $url);
+        }
         if ($page =='cart' && $number_of_items > 1) {
             $url = add_query_arg(array(
                 'multiple_products' => urlencode('TRUE'),
@@ -297,6 +307,7 @@ EOF;
             'customer_data__shipping_first_name' => urlencode($order->get_shipping_first_name()),
             'customer_data__shipping_last_name' => urlencode($order->get_shipping_last_name()),
             'customer_data__shipping_city' => urlencode($order->get_shipping_city()),
+            'customer_data__session_id'=>urlencode($this->session_id),
         ), $redirect_url);
 
         // Add dni if it exists
@@ -330,9 +341,11 @@ EOF;
         $log = 'Start;';
         $order_id = intval($_GET['order_id']);
         $event = $_GET['event'];
+        $force_change = strtolower($_GET['force_change']) === 'true'? true: false;
+        $agent = $_GET['agent'];
         $order = wc_get_order( $order_id );
         $conditions = array('pending', 'onhold', 'failed');
-
+        $order_status = $order->get_status();
         if (!$order) {
             apurata_log('Orden no encontrada: ' . $order_id);
             $log = $log . 'Order not found;';
@@ -365,14 +378,18 @@ EOF;
             http_response_code(401);
             return;
         }
-        if (!in_array($order->get_status(), $conditions)) {
-            apurata_log("Orden en estado {$order->get_status()} no puede ser procesada");
-            $log = $log . "Order in status {$order->get_status()} cannot be processed;";
+        if (!$force_change && !in_array($order_status, $conditions)) {
+            apurata_log("Orden en estado {$order_status} no puede ser procesada");
+            $log = $log . "Order in status {$order_status} cannot be processed;";
             header('Apurata-Log: ' . $log);
+            header('order_status:' . $order_status);
             http_response_code(400);
             return;
         }
         $log = $log . "Success auth;";
+        if ($force_change) {
+            $order->add_order_note( __($agent . ' aprobó cambio de estado a Procesando', APURATA_TEXT_DOMAIN));
+        }
         switch ($event) {
             case 'onhold':
                 // Collateral effect: empty cart and don't allow to choose a different payment method
@@ -382,10 +399,10 @@ EOF;
                 $order->add_order_note( __('aCuotaz validó identidad', APURATA_TEXT_DOMAIN));
                 break;
             case 'rejected':
-                $order->update_status('failed', __('aCuotaz rechazó la orden', APURATA_TEXT_DOMAIN));
+                $order->update_status('failed', __('aCuotaz no aprobó el financiamiento', APURATA_TEXT_DOMAIN));
                 break;
             case 'canceled':
-                $order->update_status('failed', __('El financiamiento en aCuotaz fue cancelado', APURATA_TEXT_DOMAIN));
+                $order->update_status('failed', __('El financiamiento en aCuotaz fue anulado', APURATA_TEXT_DOMAIN));
                 break;
             case 'funded':
                 if ($_GET["transaction_id"]) {
@@ -401,7 +418,7 @@ EOF;
                 $order->update_status('processing', $msg);
                 break;
             case 'approved':
-                $order->add_order_note( __( 'Crédito aprobado', APURATA_TEXT_DOMAIN ) );
+                $order->add_order_note( __( 'Orden Calificada (Todavia no entregar producto)', APURATA_TEXT_DOMAIN ) );
                 apurata_log('Evento ignorado: ' . $event);
                 $log = $log . 'Ignored event ' . $event . ';';
                 break;
@@ -413,7 +430,7 @@ EOF;
         }
         $log = $log . 'Done;';
         header('Apurata-Log: ' . $log);
-        return;
+        http_response_code(200);
     }
     public function get_dni_field_id() {
         foreach (WC()->checkout()->get_checkout_fields()["billing"] as $key => $value) {

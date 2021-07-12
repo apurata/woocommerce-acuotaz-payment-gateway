@@ -2,6 +2,7 @@
 class WC_Apurata_External_Hooks{
     public function __construct($file) {
         $this->file = $file;
+        $this->apurata_script = null;
     }
     public function init_hooks() {
         add_filter('plugin_action_links_' . WC_APURATA_BASENAME, array($this,'wc_apurata_add_settings_link_on_plugin_page'));
@@ -77,15 +78,20 @@ class WC_Apurata_External_Hooks{
     }
 
     public function add_apurata_script(){
-        $path = '/vendor/pixels/apurata-pixel.txt';
-        $request_uri = APURATA_STATIC_DOMAIN . $path;
-        $response = wp_remote_get($request_uri, array('timeout'=>2));
-        $httpCode = wp_remote_retrieve_response_code($response);
-        if ($httpCode != 200) {
-            apurata_log(sprintf('Apurata responded with http_code %s', $httpCode));
+        $url = '/pos/apurata-pixel';
+        $apurata_script = null;
+        $apurata_gateway = new WC_Apurata_Payment_Gateway();
+        if ($this->apurata_script) {
+            echo $this->apurata_script;
+            return;
         }
-        else{
-            echo $response['body'];
+        list($http_code, $apurata_script) = $apurata_gateway->make_curl_to_apurata('GET', $url);
+        if ($http_code == 200) {
+            $this->apurata_script = $apurata_script;
+            echo $this->apurata_script;
+        }
+        else {
+            apurata_log(sprintf('Apurata responded with http_code %s', $httpCode));
         }
     }
 }
