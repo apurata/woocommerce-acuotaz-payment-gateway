@@ -91,7 +91,7 @@ class WC_Apurata_External_Hooks{
             echo $this->apurata_script;
         }
         else {
-            apurata_log(sprintf('Apurata responded with http_code %s', $httpCode));
+            apurata_log(sprintf('Apurata responded with http_code %s', $http_code));
         }
     }
 }

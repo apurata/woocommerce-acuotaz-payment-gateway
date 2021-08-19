@@ -396,34 +396,34 @@ EOF;
                 $order->update_status('on-hold', __('aCuotaz puso la orden en onhold', APURATA_TEXT_DOMAIN));
                 break;
             case 'validated':
-                $order->add_order_note( __('aCuotaz validó identidad', APURATA_TEXT_DOMAIN));
+                $order->add_order_note( __('aCuotaz: Validó identidad del usuario', APURATA_TEXT_DOMAIN));
                 break;
             case 'rejected':
-                $order->update_status('failed', __('aCuotaz no aprobó el financiamiento', APURATA_TEXT_DOMAIN));
+                $order->update_status('failed', __('aCuotaz: No aprobó el financiamiento', APURATA_TEXT_DOMAIN));
                 break;
             case 'canceled':
-                $order->update_status('failed', __('El financiamiento en aCuotaz fue anulado', APURATA_TEXT_DOMAIN));
+                $order->update_status('failed', __('aCuotaz: Anuló el financiamiento.', APURATA_TEXT_DOMAIN));
                 break;
             case 'funded':
                 if ($_GET["transaction_id"]) {
                     $msg = __(
-                        'aCuotaz notifica que esta orden fue pagada y ya se puede entregar con transaction_id='
+                        'aCuotaz: Notifica que esta orden fue pagada y ya se puede entregar con transaction_id='
                             . $_GET["transaction_id"],
                         APURATA_TEXT_DOMAIN
                     );
                     add_post_meta($order->get_id(), 'acuotaz_transaction_id', $_GET["transaction_id"], true);
                 } else {
-                    $msg = __('aCuotaz notifica que esta orden fue pagada y ya se puede entregar', APURATA_TEXT_DOMAIN);
+                    $msg = __('aCuotaz: Notifica que esta orden fue pagada y ya se puede entregar', APURATA_TEXT_DOMAIN);
                 }
                 $order->update_status('processing', $msg);
                 break;
             case 'approved':
-                $order->add_order_note( __( 'Orden Calificada (Todavia no entregar producto)', APURATA_TEXT_DOMAIN ) );
+                $order->add_order_note( __( 'aCuotaz: Calificó el financiamiento (Todavia no entregar producto)', APURATA_TEXT_DOMAIN ) );
                 apurata_log('Evento ignorado: ' . $event);
                 $log = $log . 'Ignored event ' . $event . ';';
                 break;
             default:
-                $order->add_order_note( __( 'Ignorado evento enviado por aCuotaz: ' . $event, APURATA_TEXT_DOMAIN ) );
+                $order->add_order_note( __( 'aCuotaz: Ignoró el siguiente evento -> ' . $event, APURATA_TEXT_DOMAIN ) );
                 apurata_log('Evento ignorado: ' . $event);
                 $log = $log . 'Ignored event ' . $event . ';';
                 break;
