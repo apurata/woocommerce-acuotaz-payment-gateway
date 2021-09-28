@@ -40,11 +40,16 @@ EOF;
         $this->pay_with_apurata_addon = null;
         $this->landing_config = null;
         try{
-            $this->session_id = WC()->session->get_customer_id();
+            $apurata_session_id = WC()->session->get('apurata_session_id');
+            if (!$apurata_session_id){
+                WC()->session->set('apurata_session_id', WC()->session->get_customer_id());
+            }
+            $this->session_id = WC()->session->get('apurata_session_id');
         }catch(Throwable $e){
             apurata_log('Error:can not get session_id');
         }
     }
+
     public function init_hooks() {
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
         add_action('woocommerce_api_on_new_event_from_apurata', array($this, 'on_new_event_from_apurata'));
@@ -81,15 +86,32 @@ EOF;
                 'user__session_id' => urlencode((string) $this->session_id)
             ), $url);
         }
-        if ($page =='cart' && $number_of_items > 1) {
+        if($page == 'cart') {
+            if ($number_of_items > 1)
+                $url = add_query_arg(array('multiple_products' => urlencode('TRUE'),), $url);
+            $products = $woocommerce->cart->get_cart();
+            $string_array = '[';
+            $i = 0;
+            foreach($products as $item => $_product) {
+                $_product = $_product['data'];
+                if ($i > 0)
+                    $string_array .= ',';
+                $string_array .= sprintf('{"id":"%s","name":"%s","amount":%s}', $_product->get_id(), $_product->get_title(), $_product->get_price());
+                $i++;
+            }
             $url = add_query_arg(array(
-                'multiple_products' => urlencode('TRUE'),
+                'products'   => urlencode($string_array . ']')
             ), $url);
         }
-        if ($product) {
+        if ($page == 'product') {
+            if ($product) {
+                $url = add_query_arg(array(
+                    'product__id'   => urlencode($product->get_id()),
+                    'product__name' => urlencode($product->get_title()),
+                ), $url);
+            }
             $url = add_query_arg(array(
-                'product__id'   => urlencode($product->get_id()),
-                'product__name' => urlencode($product->get_title()),
+                'variable_amount' => $variable_price,
             ), $url);
         }
         if ($current_user) {
@@ -100,11 +122,6 @@ EOF;
                 'user__last_name'  => urlencode((string) $current_user->last_name),
             ), $url);
         }
-
-        $url = add_query_arg(array(
-            'variable_amount' => $variable_price,
-        ), $url);
-
         list($resp_code, $this->pay_with_apurata_addon) = $this->make_curl_to_apurata('GET', $url);
 
         if ($resp_code == 200) {
