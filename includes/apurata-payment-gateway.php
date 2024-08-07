@@ -51,6 +51,12 @@ EOF;
     }
 
     public function init_hooks() {
+        add_action( 'before_woocommerce_init', function() {
+            if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
+                \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+                \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
+            }
+        } );
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
         add_action('woocommerce_api_on_new_event_from_apurata', array($this, 'on_new_event_from_apurata'));
     }
@@ -235,12 +241,11 @@ EOF;
 
         $landing_config = $this->get_landing_config();
         $order_total = $this->get_order_total();
-        if ($landing_config->min_amount > $order_total || $landing_config->max_amount < $order_total) {
+        if ($order_total > 0 && ($landing_config->min_amount > $order_total || $landing_config->max_amount < $order_total)) {
             global $APURATA_API_DOMAIN;
             apurata_log('Apurata (' . $APURATA_API_DOMAIN . ') no financia el monto del carrito: ' . $order_total);
             return true;
         }
-
         return false;
     }
 
