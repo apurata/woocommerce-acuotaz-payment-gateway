@@ -15,6 +15,20 @@ class WC_Apurata_External_Hooks{
         add_action('woocommerce_review_order_before_payment', array($this, 'on_proceed_to_checkout'), 15);
         add_filter('woocommerce_payment_gateways', array($this, 'add_wc_apurata_payment_gateway'));
         add_action('wp_head', array($this, 'add_apurata_script'));
+        add_action('woocommerce_blocks_loaded', array($this, 'apurata_woocommerce_blocks_support'));
+
+    }
+    public function apurata_woocommerce_blocks_support() {
+        if ( class_exists( 'Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
+            require_once __DIR__ . '/class-apurata-block-suports.php';
+            add_action(
+                'woocommerce_blocks_payment_method_type_registration',
+                function( Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry ) {
+                    // Register an instance of My_Custom_Gateway_Blocks
+                    $payment_method_registry->register( new WC_Apurata_Blocks_Support );
+                }
+            );
+        }
     }
 
     private function update_pos_client_context() {
