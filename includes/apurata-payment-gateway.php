@@ -1,7 +1,9 @@
 <?php
-class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway {
+class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
+{
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->id = PLUGIN_ID;
         $this->title = __('Cuotas sin tarjeta de crédito - aCuotaz', APURATA_TEXT_DOMAIN);
         // Get settings, e.g.
@@ -39,29 +41,31 @@ EOF;
         // Init vars used:
         $this->pay_with_apurata_addon = null;
         $this->landing_config = null;
-        try{
+        try {
             $apurata_session_id = WC()->session->get('apurata_session_id');
-            if (!$apurata_session_id){
+            if (!$apurata_session_id) {
                 WC()->session->set('apurata_session_id', WC()->session->get_customer_id());
             }
             $this->session_id = WC()->session->get('apurata_session_id');
-        }catch(Throwable $e){
+        } catch (Throwable $e) {
             apurata_log('Error:can not get session_id');
         }
     }
 
-    public function init_hooks() {
-        add_action( 'before_woocommerce_init', function() {
-            if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
-                \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+    public function init_hooks()
+    {
+        add_action('before_woocommerce_init', function () {
+            if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+                \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
                 \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
             }
-        } );
+        });
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
         add_action('woocommerce_api_on_new_event_from_apurata', array($this, 'on_new_event_from_apurata'));
     }
 
-    public function gen_pay_with_apurata_html($page, $loan_amount = null, $variable_price = false) {
+    public function gen_pay_with_apurata_html($page, $loan_amount = null, $variable_price = false)
+    {
         if ($this->pay_with_apurata_addon) {
             return;
         }
@@ -92,13 +96,13 @@ EOF;
                 'user__session_id' => urlencode((string) $this->session_id)
             ), $url);
         }
-        if($page == 'cart') {
+        if ($page == 'cart') {
             if ($number_of_items > 1)
                 $url = add_query_arg(array('multiple_products' => urlencode('TRUE'),), $url);
             $products = $woocommerce->cart->get_cart();
             $string_array = '[';
             $i = 0;
-            foreach($products as $item => $_product) {
+            foreach ($products as $item => $_product) {
                 $_product = $_product['data'];
                 if ($i > 0)
                     $string_array .= ',';
@@ -135,10 +139,11 @@ EOF;
         } else {
             $this->pay_with_apurata_addon = '';
         }
-        echo($this->pay_with_apurata_addon);
+        echo ($this->pay_with_apurata_addon);
     }
 
-    public function make_curl_to_apurata($method, $path, $data=null, $fire_and_forget=false) {
+    public function make_curl_to_apurata($method, $path, $data = null, $fire_and_forget = false)
+    {
         // $method: "GET" or "POST"
         // $path: e.g. /pos/client/landing_config
         // If data is present, send it via JSON
@@ -187,16 +192,18 @@ EOF;
         return array($httpCode, $ret);
     }
 
-    private function get_landing_config() {
+    private function get_landing_config()
+    {
         if (!$this->landing_config) {
-            list ($httpCode, $landing_config) = $this->make_curl_to_apurata('GET', '/pos/client/landing_config');
+            list($httpCode, $landing_config) = $this->make_curl_to_apurata('GET', '/pos/client/landing_config');
             $landing_config = json_decode($landing_config);
             $this->landing_config = $landing_config;
         }
         return $this->landing_config;
     }
 
-    private function should_hide_apurata_gateway($talkToApurata) {
+    private function should_hide_apurata_gateway($talkToApurata)
+    {
         /* Hide Apurata gateway based on some conditions. */
         $currency = get_woocommerce_currency();
 
@@ -221,14 +228,13 @@ EOF;
             $isHttps && (
                 strcasecmp('on', $isHttps) == 0
                 || strcasecmp('https', $isHttps) == 0
-            )
-        ;
+            );
 
         if ($this->allow_http == 'no' && !$isHttps) {
             apurata_log('Apurata solo soporta https');
             return true;
         }
-        if( $currency != 'PEN' ){
+        if ($currency != 'PEN') {
             //disable gateway paypal if currency is ABC
             apurata_log('Apurata sólo soporta currency=PEN. Currency actual=' . $currency);
             return true;
@@ -249,35 +255,33 @@ EOF;
         return false;
     }
 
-    public function is_available() {
+    public function is_available()
+    {
         return !$this->should_hide_apurata_gateway(true);
     }
 
-    public function init_form_fields() {
+    public function init_form_fields()
+    {
         $this->form_fields = array(
-            'enabled' => array
-            (
+            'enabled' => array(
                 'title'   => __('Habilitar', APURATA_TEXT_DOMAIN) . '/' . __('Deshabilitar', APURATA_TEXT_DOMAIN),
                 'type'    => 'checkbox',
                 'label'   => __('Habilitar aCuotaz Apurata', APURATA_TEXT_DOMAIN),
                 'default' => 'yes'
             ),
-            'allow_http' => array
-            (
+            'allow_http' => array(
                 'title'   => __('Habilitar HTTP', APURATA_TEXT_DOMAIN),
                 'type'    => 'checkbox',
                 'label'   => __('Habilitar HTTP (no seguro)', APURATA_TEXT_DOMAIN),
                 'default' => 'no'
             ),
-            'is_dark_theme' => array
-            (
+            'is_dark_theme' => array(
                 'title'   => __('Tema oscuro', APURATA_TEXT_DOMAIN),
                 'type'    => 'checkbox',
                 'label'   => __('Activar en temas de fondo oscuro', APURATA_TEXT_DOMAIN),
                 'default' => 'no'
             ),
-            'client_id' => array
-            (
+            'client_id' => array(
                 'title'       => __('ID de Cliente', APURATA_TEXT_DOMAIN),
                 'type'        => 'text',
                 'required'    => true,
@@ -287,8 +291,7 @@ EOF;
                 ),
                 'default'     => ''
             ),
-            'secret_token' => array
-            (
+            'secret_token' => array(
                 'title'       => __('Token Secreto', APURATA_TEXT_DOMAIN),
                 'type'        => 'text',
                 'required'    => true,
@@ -301,19 +304,20 @@ EOF;
         );
     }
 
-    public function process_payment($order_id) {
+    public function process_payment($order_id)
+    {
         global $APURATA_DOMAIN;
-        $order = wc_get_order( $order_id );
+        $order = wc_get_order($order_id);
 
         $redirect_url = $APURATA_DOMAIN . '/pos/crear-orden-y-continuar';
 
-        $redirect_url = add_query_arg( array(
+        $redirect_url = add_query_arg(array(
             'order_id' => urlencode($order->get_id()),
             'pos_client_id' => urlencode($this->client_id),
             'amount' => urlencode($order->get_total()),
             'url_redir_on_canceled' => urlencode(wc_get_checkout_url()),
             'url_redir_on_rejected' => urlencode(wc_get_checkout_url()),
-            'url_redir_on_success' => urlencode($this->get_return_url( $order )),
+            'url_redir_on_success' => urlencode($this->get_return_url($order)),
             'customer_data__customer_id' => urlencode($order->get_customer_id()),
             'customer_data__billing_company' => urlencode($order->get_billing_company()),
             'customer_data__shipping_company' => urlencode($order->get_shipping_company()),
@@ -329,7 +333,7 @@ EOF;
             'customer_data__shipping_first_name' => urlencode($order->get_shipping_first_name()),
             'customer_data__shipping_last_name' => urlencode($order->get_shipping_last_name()),
             'customer_data__shipping_city' => urlencode($order->get_shipping_city()),
-            'customer_data__session_id'=>urlencode($this->session_id),
+            'customer_data__session_id' => urlencode($this->session_id),
         ), $redirect_url);
 
         // Add dni if it exists
@@ -355,7 +359,8 @@ EOF;
         );
     }
 
-    public function on_new_event_from_apurata() {
+    public function on_new_event_from_apurata()
+    {
         global $woocommerce;
 
         // We need a way to debug execution in ecommerce side
@@ -363,9 +368,9 @@ EOF;
         $log = 'Start;';
         $order_id = intval($_GET['order_id']);
         $event = $_GET['event'];
-        $force_change = strtolower($_GET['force_change']) === 'true'? true: false;
+        $force_change = strtolower($_GET['force_change']) === 'true' ? true : false;
         $agent = $_GET['agent'];
-        $order = wc_get_order( $order_id );
+        $order = wc_get_order($order_id);
         $conditions = array('pending', 'onhold', 'failed');
         $order_status = $order->get_status();
         if (!$order) {
@@ -386,7 +391,7 @@ EOF;
             return;
         }
         list($auth_type, $token) = explode(' ', $auth);
-        if (strtolower($auth_type) != 'bearer'){
+        if (strtolower($auth_type) != 'bearer') {
             apurata_log('Invalid authorization type');
             $log = $log . "Invalid authorization type;";
             header('Apurata-Log: ' . $log);
@@ -410,7 +415,7 @@ EOF;
         }
         $log = $log . "Success auth;";
         if ($force_change) {
-            $order->add_order_note( __($agent . ' aprobó cambio de estado a Procesando', APURATA_TEXT_DOMAIN));
+            $order->add_order_note(__($agent . ' aprobó cambio de estado a Procesando', APURATA_TEXT_DOMAIN));
         }
         switch ($event) {
             case 'onhold':
@@ -418,7 +423,7 @@ EOF;
                 $order->update_status('on-hold', __('aCuotaz puso la orden en onhold', APURATA_TEXT_DOMAIN));
                 break;
             case 'validated':
-                $order->add_order_note( __('aCuotaz: Validó identidad del usuario', APURATA_TEXT_DOMAIN));
+                $order->add_order_note(__('aCuotaz: Validó identidad del usuario', APURATA_TEXT_DOMAIN));
                 break;
             case 'rejected':
                 $order->update_status('failed', __('aCuotaz: No aprobó el financiamiento', APURATA_TEXT_DOMAIN));
@@ -440,12 +445,12 @@ EOF;
                 $order->update_status('processing', $msg);
                 break;
             case 'approved':
-                $order->add_order_note( __( 'aCuotaz: Calificó el financiamiento (Todavia no entregar producto)', APURATA_TEXT_DOMAIN ) );
+                $order->add_order_note(__('aCuotaz: Calificó el financiamiento (Todavia no entregar producto)', APURATA_TEXT_DOMAIN));
                 apurata_log('Evento ignorado: ' . $event);
                 $log = $log . 'Ignored event ' . $event . ';';
                 break;
             default:
-                $order->add_order_note( __( 'aCuotaz: Ignoró el siguiente evento -> ' . $event, APURATA_TEXT_DOMAIN ) );
+                $order->add_order_note(__('aCuotaz: Ignoró el siguiente evento -> ' . $event, APURATA_TEXT_DOMAIN));
                 apurata_log('Evento ignorado: ' . $event);
                 $log = $log . 'Ignored event ' . $event . ';';
                 break;
@@ -454,7 +459,9 @@ EOF;
         header('Apurata-Log: ' . $log);
         http_response_code(200);
     }
-    public function get_dni_field_id() {
+
+    public function get_dni_field_id()
+    {
         foreach (WC()->checkout()->get_checkout_fields()["billing"] as $key => $value) {
             if (strpos(strtolower($key), 'dni') !== false) {
                 return $key;
@@ -468,4 +475,3 @@ EOF;
         }
     }
 }
-?>
