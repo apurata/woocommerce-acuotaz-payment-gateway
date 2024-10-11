@@ -11,19 +11,7 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         $this->allow_http = $this->get_option('allow_http');
         $this->secret_token = $this->get_option('secret_token');
         $this->is_dark_theme = $this->get_option('is_dark_theme');
-        $this->description = <<<EOF
-            <div id="apurata-pos-steps"></div>
-            <script style="display:none">
-                var r = new XMLHttpRequest();
-                r.open("GET", "https://apurata.com/pos/{$this->client_id}/info-steps", true);
-                r.onreadystatechange = function () {
-                    if (r.readyState != 4 || r.status != 200) return;
-                    var elem = document.getElementById("apurata-pos-steps");
-                    elem.innerHTML = r.responseText;
-                };
-                r.send();
-            </script>
-EOF;
+        $this->description = '<div id="apurata-pos-steps"></div>';
 
         # Eventually this image will change, preserving the URL
         $this->icon = 'https://static.apurata.com/img/logo-dark-aCuotaz.svg';
@@ -52,6 +40,25 @@ EOF;
         }
     }
 
+    public function show_payment_mocker_by_js_script() {
+        if (is_checkout()) {
+            ?>
+            <script>
+                var r = new XMLHttpRequest();
+                r.open("GET", "https://apurata.com/pos/<?php echo $this->client_id; ?>/info-steps", true);
+                r.onreadystatechange = function () {
+                    if (r.readyState != 4 || r.status != 200) return;
+                        var elem = document.getElementById("apurata-pos-steps");
+                    if (elem) {
+                        elem.innerHTML = r.responseText;
+                    }
+                };
+                r.send();
+            </script>
+            <?php
+        }
+    }
+
     public function init_hooks()
     {
         add_action('before_woocommerce_init', function () {
@@ -61,6 +68,7 @@ EOF;
             }
         });
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
+        add_action('woocommerce_checkout_init', array($this, 'show_payment_mocker_by_js_script'));
         add_action('woocommerce_api_on_new_event_from_apurata', array($this, 'on_new_event_from_apurata'));
     }
 
