@@ -46,49 +46,52 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         }
     }
 
+    // Function 1: Initial load only (protects shipping methods) - runs on woocommerce_checkout_init
     public function show_payment_mocker_by_js_script() {
-        if (is_checkout() && !wp_doing_ajax()) { // Prevents script output during AJAX requests to avoid header issues
-            ?>
-            <script>
-                var r = new XMLHttpRequest();
-                r.open("GET", "https://apurata.com/pos/<?php echo $this->client_id; ?>/info-steps", true);
-                r.onreadystatechange = function () {
-                    if (r.readyState != 4 || r.status != 200) return;
-                        var elem = document.getElementById("apurata-pos-steps");
-                    if (elem) {
-                        elem.innerHTML = r.responseText;
-                    }
-                };
-                r.send();
-            </script>
-            <?php
-        }
+        // Early return: only if checkout AND not doing AJAX (protects shipping methods)
+        if (!is_checkout() || wp_doing_ajax()) return;
+        
+        ?>
+        <script>
+            var r = new XMLHttpRequest();
+            r.open("GET", "https://apurata.com/pos/<?php echo $this->client_id; ?>/info-steps", true);
+            r.onreadystatechange = function () {
+                if (r.readyState != 4 || r.status != 200) return;
+                    var elem = document.getElementById("apurata-pos-steps");
+                if (elem) {
+                    elem.innerHTML = r.responseText;
+                }
+            };
+            r.send();
+        </script>
+        <?php
     }
 
-    // Only handle aCuotaz payment image when method is selected
+    // Function 2: Dynamic selection handler (always runs in footer for both WooCommerce and FunnelKit)
     public function add_payment_selection_handler() {
-        if (is_checkout()) {
-            static $script_added = false;
-            if (!$script_added) {
-                $script_added = true;
-                ?>
-                <script>
-                jQuery(function($) {
-                    function load() {
-                        var e = document.getElementById("apurata-pos-steps");
-                        if (e && $('input[name="payment_method"]:checked').val() === 'apurata') {
-                            var r = new XMLHttpRequest();
-                            r.open("GET", "https://apurata.com/pos/<?php echo $this->client_id; ?>/info-steps", true);
-                            r.onreadystatechange = function () { if (r.readyState == 4 && r.status == 200) e.innerHTML = r.responseText; };
-                            r.send();
-                        }
+        // Early return: only if checkout
+        if (!is_checkout()) return;
+        
+        static $script_added = false;
+        if (!$script_added) {
+            $script_added = true;
+            ?>
+            <script>
+            jQuery(function($) {
+                function load() {
+                    var e = document.getElementById("apurata-pos-steps");
+                    if (e && $('input[name="payment_method"]:checked').val() === 'apurata') {
+                        var r = new XMLHttpRequest();
+                        r.open("GET", "https://apurata.com/pos/<?php echo $this->client_id; ?>/info-steps", true);
+                        r.onreadystatechange = function () { if (r.readyState == 4 && r.status == 200) e.innerHTML = r.responseText; };
+                        r.send();
                     }
-                    $(document).on('change click wfacp_payment_method_changed updated_checkout', 'input[name="payment_method"], body', function() { setTimeout(load, 100); });
-                    setTimeout(load, 500);
-                });
-                </script>
-                <?php
-            }
+                }
+                $(document).on('change click wfacp_payment_method_changed updated_checkout', 'input[name="payment_method"], body', function() { setTimeout(load, 100); });
+                setTimeout(load, 500);
+            });
+            </script>
+            <?php
         }
     }
 
