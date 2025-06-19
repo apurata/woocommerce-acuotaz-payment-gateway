@@ -31,18 +31,23 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         $this->pay_with_apurata_addon = null;
         $this->landing_config = null;
         try {
-            $apurata_session_id = WC()->session->get('apurata_session_id');
-            if (!$apurata_session_id) {
-                WC()->session->set('apurata_session_id', WC()->session->get_customer_id());
+            if (WC() && WC()->session) {
+                $apurata_session_id = WC()->session->get('apurata_session_id');
+                if (!$apurata_session_id) {
+                    WC()->session->set('apurata_session_id', WC()->session->get_customer_id());
+                }
+                $this->session_id = WC()->session->get('apurata_session_id');
+            } else {
+                $this->session_id = '';
             }
-            $this->session_id = WC()->session->get('apurata_session_id');
         } catch (Throwable $e) {
             apurata_log('Error:can not get session_id');
+            $this->session_id = '';
         }
     }
 
     public function show_payment_mocker_by_js_script() {
-        if (is_checkout() && !wp_doing_ajax()) {
+        if (is_checkout() && !wp_doing_ajax()) { // Prevents script output during AJAX requests to avoid header issues
             ?>
             <script>
                 var r = new XMLHttpRequest();
@@ -60,6 +65,33 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         }
     }
 
+    // Only handle aCuotaz payment image when method is selected
+    public function add_payment_selection_handler() {
+        if (is_checkout()) {
+            static $script_added = false;
+            if (!$script_added) {
+                $script_added = true;
+                ?>
+                <script>
+                jQuery(function($) {
+                    function load() {
+                        var e = document.getElementById("apurata-pos-steps");
+                        if (e && $('input[name="payment_method"]:checked').val() === 'apurata') {
+                            var r = new XMLHttpRequest();
+                            r.open("GET", "https://apurata.com/pos/<?php echo $this->client_id; ?>/info-steps", true);
+                            r.onreadystatechange = function () { if (r.readyState == 4 && r.status == 200) e.innerHTML = r.responseText; };
+                            r.send();
+                        }
+                    }
+                    $(document).on('change click wfacp_payment_method_changed updated_checkout', 'input[name="payment_method"], body', function() { setTimeout(load, 100); });
+                    setTimeout(load, 500);
+                });
+                </script>
+                <?php
+            }
+        }
+    }
+
     public function init_hooks()
     {
         add_action('before_woocommerce_init', function () {
@@ -70,6 +102,7 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         });
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
         add_action('woocommerce_checkout_init', array($this, 'show_payment_mocker_by_js_script'));
+        add_action('wp_footer', array($this, 'add_payment_selection_handler')); // Works during AJAX
         add_action('woocommerce_api_on_new_event_from_apurata', array($this, 'on_new_event_from_apurata'));
     }
 
@@ -147,10 +180,10 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
                 'user__last_name'  => urlencode((string) $current_user->last_name),
             ), $url);
         }
-        list($resp_code, $this->pay_with_apurata_addon, $apiContext) = $this->make_curl_to_apurata('GET', $url);
+        $apiContext = $this->make_curl_to_apurata('GET', $url);
 
-        if ($resp_code == 200) {
-            $this->pay_with_apurata_addon = str_replace(array("\r", "\n"), '', $this->pay_with_apurata_addon);
+        if ($apiContext['http_code'] == 200) {
+            $this->pay_with_apurata_addon = str_replace(array("\r", "\n"), '', $apiContext['response_raw']);
         } else {
             $this->pay_with_apurata_addon = '';
         }
@@ -200,44 +233,154 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         }
 
         $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        $curlErrno = curl_errno($ch);
-        curl_close($ch);
-
+        
         // Create API context for Sentry reporting
         $apiContext = [
-            'http_code'      => $httpCode,
+            'http_code'      => curl_getinfo($ch, CURLINFO_HTTP_CODE),
             'response_raw'   => $response,
             'response_json'  => json_decode($response),
             'url'            => $url,
             'method'         => $method,
             'request_body'   => $payload,
             'request_headers'=> $headers,
-            'curl_error'     => $curlError,
-            'curl_errno'     => $curlErrno,
+            'curl_error'     => curl_error($ch),
+            'curl_errno'     => curl_errno($ch),
+        ];
+        curl_close($ch);
+
+        if ($apiContext['http_code'] != 200) {
+            $message = 'Error in HTTP response from Apurata endpoint';
+            apurata_log($message);
+            $this->sendToSentry($message, null, $apiContext);
+        }
+
+        return $apiContext;
+    }
+
+    private function getSentryPayload(string $message, ?\Throwable $exception = null, $apiContext = null): array
+    {
+        $eventId = bin2hex(random_bytes(16));
+        $timestamp = gmdate('Y-m-d\TH:i:s');
+        
+        $wc_version = defined('WC_VERSION') ? WC_VERSION : 'unknown';
+        $wp_version = get_bloginfo('version');
+
+        $payload = [
+            'event_id'    => $eventId,
+            'timestamp'   => $timestamp,
+            'platform'    => 'php',
+            'environment' => 'production',
+            'level'       => 'error',
+            'logger'      => 'apurata-woocommerce',
+            'message'     => $message,
+            'tags'        => [
+                'client_id' => $this->client_id,
+            ],
+            'server_name' => gethostname() ?: 'unknown',
+            'user' => [
+                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            ],
+            'contexts' => [
+                'platform' => [
+                    'php_version'           => PHP_VERSION,
+                    'wordpress_version'     => $wp_version,
+                    'woocommerce_version'   => $wc_version,
+                ],
+                'runtime' => [
+                    'name' => 'php',
+                    'version' => PHP_VERSION,
+                ],
+                'os' => [
+                    'name' => php_uname('s'),
+                    'version' => php_uname('r'),
+                ],
+            ],
         ];
 
-        if ($httpCode != 200) {
-            $message = 'Apurata responded with http_code ' . $httpCode . ' on ' . $method . ' to ' . $url;
-            apurata_log($message);
-            $this->sendToSentry($message, null, $apiContext);
+        if ($exception) {
+            $payload['exception'] = [[
+                'type'  => get_class($exception),
+                'value' => $exception->getMessage(),
+                'stacktrace' => [
+                    'frames' => array_map(function ($frame) {
+                        return [
+                            'filename' => $frame['file'] ?? '[internal]',
+                            'function' => $frame['function'] ?? '[unknown]',
+                            'lineno'   => $frame['line'] ?? 0,
+                        ];
+                    }, array_reverse($exception->getTrace()))
+                ]
+            ]];
         }
 
-        if ($curlErrno > 0) {
-            $message = 'cURL error: ' . $curlError . ' (errno: ' . $curlErrno . ') on ' . $method . ' to ' . $url;
-            apurata_log($message);
-            $this->sendToSentry($message, null, $apiContext);
+        if ($apiContext) {
+            $httpCode = $apiContext['http_code'] ?? 0;
+            $payload['tags']['http_status_group'] = floor($httpCode / 100) . 'xx';
+            $payload['request'] = [
+                'url'     => $apiContext['url'] ?? '',
+                'method'  => $apiContext['method'] ?? '',
+                'data'    => $apiContext['request_body'] ?? null,
+                'headers' => array_map(fn($h) => array_map('trim', explode(':', $h, 2)), $apiContext['request_headers'] ?? []),
+            ];
+            $payload['contexts']['response'] = [
+                'status_code' => $httpCode,
+                'body'        => $apiContext['response_json'] ?? $apiContext['response_raw'] ?? '',
+            ];
+            $payload['contexts']['curl'] = [
+                'error'  => $apiContext['curl_error'] ?? '',
+                'errno'  => $apiContext['curl_errno'] ?? 0,
+            ];
         }
 
-        return array($httpCode, $response, $apiContext);
+        return $payload;
+    }
+
+    public function sendToSentry(string $message, ?\Throwable $exception = null, $apiContext = null): void
+    {
+        if (empty($this->sentry_dsn) || !$this->sentry_dsn) {
+            return;
+        }
+
+        $dsn = $this->sentry_dsn;
+        $parsed = parse_url($dsn);
+        
+        if (!$parsed) return;
+
+        $publicKey = $parsed['user'];
+        $host = $parsed['host'];
+        $projectId = ltrim($parsed['path'], '/');
+        $endpoint = "https://{$host}/api/{$projectId}/store/";
+
+        $payload = $this->getSentryPayload($message, $exception, $apiContext);
+
+        if (!function_exists('get_plugin_data')) {
+            require_once(ABSPATH . 'wp-admin/includes/plugin.php');
+        }
+        $plugin_file = WP_PLUGIN_DIR . '/' . WC_APURATA_BASENAME;
+        $plugin_version = get_plugin_data($plugin_file)['Version'];
+
+        $headers = [
+            'Content-Type: application/json',
+            "X-Sentry-Auth: Sentry sentry_version=7, sentry_client=apurata-woocommerce/{$plugin_version}, sentry_key={$publicKey}",
+        ];
+
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_TIMEOUT => 2,
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
     }
 
     private function get_landing_config()
     {
         if (!$this->landing_config) {
-            list($httpCode, $landing_config, $apiContext) = $this->make_curl_to_apurata('GET', '/pos/client/landing_config');
-            $landing_config = json_decode($landing_config);
+            $apiContext = $this->make_curl_to_apurata('GET', '/pos/client/landing_config');
+            $landing_config = $apiContext['response_json'] ?: json_decode($apiContext['response_raw']);
             $this->landing_config = $landing_config;
         }
         return $this->landing_config;
@@ -287,11 +430,12 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         }
         
         if (!isset(WC()->cart) || WC()->cart === null) {
+            // hides the gateway when WC()->cart is null during AJAX updates to prevent critical errors
             return true;
         }
 
         $landing_config = $this->get_landing_config();
-        $order_total = (WC()->cart && is_object(WC()->cart)) ? WC()->cart->total : 0;
+        $order_total = WC()->cart->total;
         if ($order_total > 0 && ($landing_config->min_amount > $order_total || $landing_config->max_amount < $order_total)) {
             global $APURATA_API_DOMAIN;
             apurata_log('Apurata (' . $APURATA_API_DOMAIN . ') no financia el monto del carrito: ' . $order_total);
@@ -351,7 +495,7 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
                 'type'        => 'text',
                 'required'    => false,
                 'description' => __(
-                    'DSN de Sentry para monitoreo de errores (opcional).',
+                    'Habilitar monitoreo de errores para mejorar el soporte y  estabilidad',
                     APURATA_TEXT_DOMAIN
                 ),
                 'default'     => ''
@@ -532,111 +676,5 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
             }
         }
         return '';
-    }
-
-    public function sendToSentry(string $message, ?\Throwable $exception = null, $apiContext = null): void
-    {
-        // Check if Sentry DSN is configured
-        if (empty($this->sentry_dsn) || !$this->sentry_dsn) {
-            return;
-        }
-
-        $dsn = $this->sentry_dsn;
-        $parsed = parse_url($dsn);
-        
-        if (!$parsed) return;
-
-        $publicKey = $parsed['user'];
-        $host = $parsed['host'];
-        $projectId = ltrim($parsed['path'], '/');
-        $endpoint = "https://{$host}/api/{$projectId}/store/";
-        $eventId = bin2hex(random_bytes(16));
-        $timestamp = gmdate('Y-m-d\TH:i:s');
-        
-        $wc_version = defined('WC_VERSION') ? WC_VERSION : 'unknown';
-        $wp_version = get_bloginfo('version');
-
-        $payload = [
-            'event_id'    => $eventId,
-            'timestamp'   => $timestamp,
-            'platform'    => 'php',
-            'environment' => 'production',
-            'level'       => 'error',
-            'logger'      => 'apurata-woocommerce',
-            'message'     => $message,
-            'tags'        => [
-                'client_id' => $this->client_id,
-            ],
-            'server_name' => gethostname() ?: 'unknown',
-            'user' => [
-                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-            ],
-            'contexts' => [
-                'platform' => [
-                    'php_version'           => PHP_VERSION,
-                    'wordpress_version'     => $wp_version,
-                    'woocommerce_version'   => $wc_version,
-                ],
-                'runtime' => [
-                    'name' => 'php',
-                    'version' => PHP_VERSION,
-                ],
-                'os' => [
-                    'name' => php_uname('s'),
-                    'version' => php_uname('r'),
-                ],
-            ],
-        ];
-
-        if ($exception) {
-            $payload['exception'] = [[
-                'type'  => get_class($exception),
-                'value' => $exception->getMessage(),
-                'stacktrace' => [
-                    'frames' => array_map(function ($frame) {
-                        return [
-                            'filename' => $frame['file'] ?? '[internal]',
-                            'function' => $frame['function'] ?? '[unknown]',
-                            'lineno'   => $frame['line'] ?? 0,
-                        ];
-                    }, array_reverse($exception->getTrace()))
-                ]
-            ]];
-        }
-
-        if ($apiContext) {
-            $httpCode = $apiContext['http_code'] ?? 0;
-            $payload['tags']['http_status_group'] = floor($httpCode / 100) . 'xx';
-            $payload['request'] = [
-                'url'     => $apiContext['url'] ?? '',
-                'method'  => $apiContext['method'] ?? '',
-                'data'    => $apiContext['request_body'] ?? null,
-                'headers' => array_map(fn($h) => array_map('trim', explode(':', $h, 2)), $apiContext['request_headers'] ?? []),
-            ];
-            $payload['contexts']['response'] = [
-                'status_code' => $httpCode,
-                'body'        => $apiContext['response_json'] ?? $apiContext['response_raw'] ?? '',
-            ];
-            $payload['contexts']['curl'] = [
-                'error'  => $apiContext['curl_error'] ?? '',
-                'errno'  => $apiContext['curl_errno'] ?? 0,
-            ];
-        }
-
-        $headers = [
-            'Content-Type: application/json',
-            "X-Sentry-Auth: Sentry sentry_version=7, sentry_client=apurata-woocommerce/1.0, sentry_key={$publicKey}",
-        ];
-
-        $ch = curl_init($endpoint);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POSTFIELDS => json_encode($payload),
-            CURLOPT_TIMEOUT => 2,
-        ]);
-        curl_exec($ch);
-        curl_close($ch);
     }
 }

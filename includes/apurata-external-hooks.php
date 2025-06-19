@@ -45,7 +45,7 @@ class WC_Apurata_External_Hooks
             }
             $apurata_gateway = new WC_Apurata_Payment_Gateway();
             $url = "/pos/client/" . $apurata_gateway->client_id . "/context";
-            list($httpCode, $response, $apiContext) = $apurata_gateway->make_curl_to_apurata("POST", $url, array(
+            $apiContext = $apurata_gateway->make_curl_to_apurata("POST", $url, array(
                 "php_version"         => PHP_VERSION,
                 "wordpress_version"   => $wp_version,
                 "woocommerce_version" => WC_VERSION,
@@ -59,6 +59,8 @@ class WC_Apurata_External_Hooks
         try {
             $this->update_pos_client_context();
         } catch (SomeException $e) {
+            $apurata_gateway = new WC_Apurata_Payment_Gateway();
+            $apurata_gateway->sendToSentry("Error updating POS client context", $e);
         }
         $plugin_links = array();
         $plugin_links[] = '<a href="'
@@ -110,12 +112,12 @@ class WC_Apurata_External_Hooks
             echo $this->apurata_script;
             return;
         }
-        list($http_code, $apurata_script, $apiContext) = $apurata_gateway->make_curl_to_apurata('GET', $url);
-        if ($http_code == 200) {
-            $this->apurata_script = $apurata_script;
+        $apiContext = $apurata_gateway->make_curl_to_apurata('GET', $url);
+        if ($apiContext['http_code'] == 200) {
+            $this->apurata_script = $apiContext['response_raw'];
             echo $this->apurata_script;
         } else {
-            apurata_log(sprintf('Apurata responded with http_code %s', $http_code));
+            apurata_log(sprintf('Apurata responded with http_code %s', $apiContext['http_code']));
         }
     }
 }

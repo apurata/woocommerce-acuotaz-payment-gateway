@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.4.1
+ * Version:           0.4.2
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
@@ -82,6 +82,10 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             include_once($plugin_dir_path . 'apurata-update.php');
         } catch (Throwable $e){
             send_error($e,"aCuotaz dejo de funcionar debido a problemas de compilacion.Contáctanos!");
+            if (class_exists('WC_Apurata_Payment_Gateway')) {
+                $gateway = new WC_Apurata_Payment_Gateway();
+                $gateway->sendToSentry("aCuotaz dejo de funcionar debido a problemas de compilacion", $e);
+            }
             /*
             try{
                 deactivate_plugins(plugin_basename(__FILE__));
@@ -99,6 +103,10 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             $WC_apurata_payment_gateway->init_hooks();
         } catch (Throwable $e){
             send_error($e,"No se pudo iniciar aCuotaz Payment,no se mostrará como metodo de pago.Contáctanos!");
+            if (class_exists('WC_Apurata_Payment_Gateway')) {
+                $gateway = new WC_Apurata_Payment_Gateway();
+                $gateway->sendToSentry("No se pudo iniciar aCuotaz Payment", $e);
+            }
         }
 
         try{
@@ -106,6 +114,10 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             $WC_apurata_API->init_hooks();
         } catch (Throwable $e){
             send_error($e,"No se pudo iniciar aCuotaz API,no podremos conocer el estado de una orden.Contáctanos!");
+            if (class_exists('WC_Apurata_Payment_Gateway')) {
+                $gateway = new WC_Apurata_Payment_Gateway();
+                $gateway->sendToSentry("No se pudo iniciar aCuotaz API", $e);
+            }
         }
 
         try{
@@ -116,6 +128,10 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             $WC_apurata_update->initialize();
         } catch (Throwable $e){
             send_error($e,"No se pudo iniciar aCuotaz Autoupdate,no podra realizar actualizaciones.Contáctanos!");
+            if (class_exists('WC_Apurata_Payment_Gateway')) {
+                $gateway = new WC_Apurata_Payment_Gateway();
+                $gateway->sendToSentry("No se pudo iniciar aCuotaz Autoupdate", $e);
+            }
         }
     }
 }
