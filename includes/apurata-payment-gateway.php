@@ -11,7 +11,6 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         $this->allow_http = $this->get_option('allow_http');
         $this->secret_token = $this->get_option('secret_token');
         $this->is_dark_theme = $this->get_option('is_dark_theme');
-        $this->sentry_dsn = $this->get_option('sentry_dsn');
         $this->description = '<div id="apurata-pos-steps"></div>';
 
         # Eventually this image will change, preserving the URL
@@ -42,7 +41,7 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
     }
 
     public function show_payment_mocker_by_js_script() {
-        if (is_checkout() && !wp_doing_ajax()) {
+        if (is_checkout()) {
             ?>
             <script>
                 var r = new XMLHttpRequest();
@@ -78,18 +77,14 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         if ($this->pay_with_apurata_addon) {
             return;
         }
-        
-        $cart = WC()->cart;
-        $cart_exists = $cart && is_object($cart);
-        
         if (!$loan_amount) {
-            $loan_amount = $cart_exists ? $cart->total : 0;
+            $loan_amount = $this->get_order_total();
         }
         if ($this->should_hide_apurata_gateway(false)) {
             // Don't talk to apurata, the add-on endpoint will run the validations
             return;
         }
-        
+        global $woocommerce;
         global $wp;
         global $product;
         global $current_user;
@@ -97,9 +92,7 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         $url = "/pos/pay-with-apurata-add-on/" . $loan_amount;
 
         $current_url = add_query_arg($wp->query_vars, home_url($wp->request));
-        
-        $number_of_items = $cart_exists ? $cart->cart_contents_count : 0;
-        
+        $number_of_items = $woocommerce->cart->cart_contents_count;
         $dark_theme = ($this->is_dark_theme == '' || $this->is_dark_theme == 'no') ? 'FALSE' : 'TRUE';
         $url = add_query_arg(array(
             'page' => urlencode($page),
@@ -114,7 +107,7 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         if ($page == 'cart') {
             if ($number_of_items > 1)
                 $url = add_query_arg(array('multiple_products' => urlencode('TRUE'),), $url);
-            $products = $cart_exists ? $cart->get_cart() : [];
+            $products = $woocommerce->cart->get_cart();
             $string_array = '[';
             $i = 0;
             foreach ($products as $item => $_product) {
@@ -147,7 +140,7 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
                 'user__last_name'  => urlencode((string) $current_user->last_name),
             ), $url);
         }
-        list($resp_code, $this->pay_with_apurata_addon, $apiContext) = $this->make_curl_to_apurata('GET', $url);
+        list($resp_code, $this->pay_with_apurata_addon) = $this->make_curl_to_apurata('GET', $url);
 
         if ($resp_code == 200) {
             $this->pay_with_apurata_addon = str_replace(array("\r", "\n"), '', $this->pay_with_apurata_addon);
@@ -181,7 +174,6 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
             throw new Exception('Method not supported: ' . $method);
         }
 
-        $payload = null;
         if ($data) {
             $payload = json_encode($data);
             // Attach encoded JSON string to the POST fields
@@ -199,44 +191,19 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
             curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
         }
 
-        $response = curl_exec($ch);
+        $ret = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        $curlErrno = curl_errno($ch);
-        curl_close($ch);
-
-        // Create API context for Sentry reporting
-        $apiContext = [
-            'http_code'      => $httpCode,
-            'response_raw'   => $response,
-            'response_json'  => json_decode($response),
-            'url'            => $url,
-            'method'         => $method,
-            'request_body'   => $payload,
-            'request_headers'=> $headers,
-            'curl_error'     => $curlError,
-            'curl_errno'     => $curlErrno,
-        ];
-
         if ($httpCode != 200) {
-            $message = 'Apurata responded with http_code ' . $httpCode . ' on ' . $method . ' to ' . $url;
-            apurata_log($message);
-            $this->sendToSentry($message, null, $apiContext);
+            apurata_log('Apurata responded with http_code ' . $httpCode . ' on ' . $method . ' to ' . $url);
         }
-
-        if ($curlErrno > 0) {
-            $message = 'cURL error: ' . $curlError . ' (errno: ' . $curlErrno . ') on ' . $method . ' to ' . $url;
-            apurata_log($message);
-            $this->sendToSentry($message, null, $apiContext);
-        }
-
-        return array($httpCode, $response, $apiContext);
+        curl_close($ch);
+        return array($httpCode, $ret);
     }
 
     private function get_landing_config()
     {
         if (!$this->landing_config) {
-            list($httpCode, $landing_config, $apiContext) = $this->make_curl_to_apurata('GET', '/pos/client/landing_config');
+            list($httpCode, $landing_config) = $this->make_curl_to_apurata('GET', '/pos/client/landing_config');
             $landing_config = json_decode($landing_config);
             $this->landing_config = $landing_config;
         }
@@ -285,13 +252,9 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
             // The following checks require to talk to Apurata
             return false;
         }
-        
-        if (!isset(WC()->cart) || WC()->cart === null) {
-            return true;
-        }
 
         $landing_config = $this->get_landing_config();
-        $order_total = (WC()->cart && is_object(WC()->cart)) ? WC()->cart->total : 0;
+        $order_total = $this->get_order_total();
         if ($order_total > 0 && ($landing_config->min_amount > $order_total || $landing_config->max_amount < $order_total)) {
             global $APURATA_API_DOMAIN;
             apurata_log('Apurata (' . $APURATA_API_DOMAIN . ') no financia el monto del carrito: ' . $order_total);
@@ -342,16 +305,6 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
                 'required'    => true,
                 'description' => __(
                     'Para obtener este Token comunícate con nosotros al correo merchants@apurata.com',
-                    APURATA_TEXT_DOMAIN
-                ),
-                'default'     => ''
-            ),
-            'sentry_dsn' => array(
-                'title'       => __('Sentry DSN', APURATA_TEXT_DOMAIN),
-                'type'        => 'text',
-                'required'    => false,
-                'description' => __(
-                    'DSN de Sentry para monitoreo de errores (opcional).',
                     APURATA_TEXT_DOMAIN
                 ),
                 'default'     => ''
@@ -427,8 +380,7 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         $agent = $_GET['agent'];
         $order = wc_get_order($order_id);
         $conditions = array('pending', 'onhold', 'failed');
-        $order_status = $order ? $order->get_status() : '';
-
+        $order_status = $order->get_status();
         if (!$order) {
             apurata_log('Orden no encontrada: ' . $order_id);
             $log = $log . 'Order not found;';
@@ -438,7 +390,7 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         }
 
         // Check Authorization
-        $auth = isset(getallheaders()['Apurata-Auth']) ? getallheaders()['Apurata-Auth'] : '';
+        $auth = getallheaders()['Apurata-Auth'];
         if (!$auth) {
             apurata_log('Missing authorization header');
             $log = $log . "Missing authorization header;";
@@ -488,7 +440,7 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
                 $order->update_status('failed', __('aCuotaz: Anuló el financiamiento.', APURATA_TEXT_DOMAIN));
                 break;
             case 'funded':
-                if (isset($_GET["transaction_id"]) && $_GET["transaction_id"]) {
+                if ($_GET["transaction_id"]) {
                     $msg = __(
                         'aCuotaz: Notifica que esta orden fue pagada y ya se puede entregar con transaction_id='
                             . $_GET["transaction_id"],
@@ -517,126 +469,17 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
     }
 
     public function get_dni_field_id()
-    {	
-    	$fields = WC()->checkout()->get_checkout_fields()["billing"] ?? [];
-        
-        foreach ($fields as $key => $value) {
+    {
+        foreach (WC()->checkout()->get_checkout_fields()["billing"] as $key => $value) {
             if (strpos(strtolower($key), 'dni') !== false) {
                 return $key;
             }
-            if (isset($value["label"]) && strpos(strtolower($value["label"]), 'dni') !== false) {
+            if (strpos(strtolower($value["label"]), 'dni') !== false) {
                 return $key;
             }
-            if (isset($value["placeholder"]) && strpos(strtolower($value["placeholder"]), 'dni') !== false) {
+            if (strpos(strtolower($value["placeholder"]), 'dni') !== false) {
                 return $key;
             }
         }
-        return '';
-    }
-
-    public function sendToSentry(string $message, ?\Throwable $exception = null, $apiContext = null): void
-    {
-        // Check if Sentry DSN is configured
-        if (empty($this->sentry_dsn) || !$this->sentry_dsn) {
-            return;
-        }
-
-        $dsn = $this->sentry_dsn;
-        $parsed = parse_url($dsn);
-        
-        if (!$parsed) return;
-
-        $publicKey = $parsed['user'];
-        $host = $parsed['host'];
-        $projectId = ltrim($parsed['path'], '/');
-        $endpoint = "https://{$host}/api/{$projectId}/store/";
-        $eventId = bin2hex(random_bytes(16));
-        $timestamp = gmdate('Y-m-d\TH:i:s');
-        
-        $wc_version = defined('WC_VERSION') ? WC_VERSION : 'unknown';
-        $wp_version = get_bloginfo('version');
-
-        $payload = [
-            'event_id'    => $eventId,
-            'timestamp'   => $timestamp,
-            'platform'    => 'php',
-            'environment' => 'production',
-            'level'       => 'error',
-            'logger'      => 'apurata-woocommerce',
-            'message'     => $message,
-            'tags'        => [
-                'client_id' => $this->client_id,
-            ],
-            'server_name' => gethostname() ?: 'unknown',
-            'user' => [
-                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-            ],
-            'contexts' => [
-                'platform' => [
-                    'php_version'           => PHP_VERSION,
-                    'wordpress_version'     => $wp_version,
-                    'woocommerce_version'   => $wc_version,
-                ],
-                'runtime' => [
-                    'name' => 'php',
-                    'version' => PHP_VERSION,
-                ],
-                'os' => [
-                    'name' => php_uname('s'),
-                    'version' => php_uname('r'),
-                ],
-            ],
-        ];
-
-        if ($exception) {
-            $payload['exception'] = [[
-                'type'  => get_class($exception),
-                'value' => $exception->getMessage(),
-                'stacktrace' => [
-                    'frames' => array_map(function ($frame) {
-                        return [
-                            'filename' => $frame['file'] ?? '[internal]',
-                            'function' => $frame['function'] ?? '[unknown]',
-                            'lineno'   => $frame['line'] ?? 0,
-                        ];
-                    }, array_reverse($exception->getTrace()))
-                ]
-            ]];
-        }
-
-        if ($apiContext) {
-            $httpCode = $apiContext['http_code'] ?? 0;
-            $payload['tags']['http_status_group'] = floor($httpCode / 100) . 'xx';
-            $payload['request'] = [
-                'url'     => $apiContext['url'] ?? '',
-                'method'  => $apiContext['method'] ?? '',
-                'data'    => $apiContext['request_body'] ?? null,
-                'headers' => array_map(fn($h) => array_map('trim', explode(':', $h, 2)), $apiContext['request_headers'] ?? []),
-            ];
-            $payload['contexts']['response'] = [
-                'status_code' => $httpCode,
-                'body'        => $apiContext['response_json'] ?? $apiContext['response_raw'] ?? '',
-            ];
-            $payload['contexts']['curl'] = [
-                'error'  => $apiContext['curl_error'] ?? '',
-                'errno'  => $apiContext['curl_errno'] ?? 0,
-            ];
-        }
-
-        $headers = [
-            'Content-Type: application/json',
-            "X-Sentry-Auth: Sentry sentry_version=7, sentry_client=apurata-woocommerce/1.0, sentry_key={$publicKey}",
-        ];
-
-        $ch = curl_init($endpoint);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POSTFIELDS => json_encode($payload),
-            CURLOPT_TIMEOUT => 2,
-        ]);
-        curl_exec($ch);
-        curl_close($ch);
     }
 }

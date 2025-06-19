@@ -45,7 +45,7 @@ class WC_Apurata_External_Hooks
             }
             $apurata_gateway = new WC_Apurata_Payment_Gateway();
             $url = "/pos/client/" . $apurata_gateway->client_id . "/context";
-            list($httpCode, $response, $apiContext) = $apurata_gateway->make_curl_to_apurata("POST", $url, array(
+            $apurata_gateway->make_curl_to_apurata("POST", $url, array(
                 "php_version"         => PHP_VERSION,
                 "wordpress_version"   => $wp_version,
                 "woocommerce_version" => WC_VERSION,
@@ -110,7 +110,7 @@ class WC_Apurata_External_Hooks
             echo $this->apurata_script;
             return;
         }
-        list($http_code, $apurata_script, $apiContext) = $apurata_gateway->make_curl_to_apurata('GET', $url);
+        list($http_code, $apurata_script) = $apurata_gateway->make_curl_to_apurata('GET', $url);
         if ($http_code == 200) {
             $this->apurata_script = $apurata_script;
             echo $this->apurata_script;
