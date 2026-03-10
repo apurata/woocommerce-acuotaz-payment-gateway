@@ -87,7 +87,8 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
                         r.send();
                     }
                 }
-                $(document).on('change click wfacp_payment_method_changed updated_checkout', 'input[name="payment_method"], body', function() { setTimeout(load, 100); });
+                $(document).on('change wfacp_payment_method_changed updated_checkout', 'input[name="payment_method"]', function() { setTimeout(load, 100); });
+                $(document).on('wfacp_payment_method_changed updated_checkout', function() { setTimeout(load, 100); });
                 setTimeout(load, 500);
             });
             </script>
@@ -202,10 +203,9 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         $ch = curl_init();
         $url = $APURATA_API_DOMAIN . $path;
         curl_setopt($ch, CURLOPT_URL, $url);
-        // Timeouts
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);    // seconds
-        curl_setopt($ch, CURLOPT_TIMEOUT, 2); // seconds
-
+        // Timeouts: enough for DNS + TCP + TLS + response (we had problem with 2 seconds)
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
         $headers = array('Authorization: Bearer ' . $this->secret_token);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
@@ -254,7 +254,18 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         if ($apiContext['http_code'] != 200) {
             $message = 'Error in HTTP response from Apurata endpoint';
             apurata_log($message);
-            $this->sendToSentry($message, null, $apiContext);
+            // Throttle Sentry for network/timeout errors only: at most one event every 20 min
+            // to avoid burning quota. Real HTTP errors (4xx/5xx) are always sent.
+            $is_network_or_timeout = ($apiContext['http_code'] === 0 || (int) ($apiContext['curl_errno'] ?? 0) === 28);
+            if ($is_network_or_timeout) {
+                $throttle_key = 'apurata_sentry_timeout_throttle';
+                if (!get_transient($throttle_key)) {
+                    $this->sendToSentry($message, null, $apiContext);
+                    set_transient($throttle_key, 1, 20 * MINUTE_IN_SECONDS);
+                }
+            } else {
+                $this->sendToSentry($message, null, $apiContext);
+            }
         }
 
         return $apiContext;
