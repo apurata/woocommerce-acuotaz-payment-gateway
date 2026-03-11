@@ -70,3 +70,4 @@ sudo chmod -R g+w woocommerce-apurata-payment-gateway
 - Write a correct documentation in the release ( This will show in wordpress).
 - Add the file woocommerce-apurata-payment-gateway.zip.
 - Publish new release.
+- Update the download link in **Installation** (step 2, "click here") so the URL uses the new tag, e.g. `.../releases/download/v0.4.4/woocommerce-apurata-payment-gateway.zip`.
