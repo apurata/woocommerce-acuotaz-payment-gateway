@@ -63,6 +63,7 @@ sudo chmod -R g+w woocommerce-apurata-payment-gateway
 
 ## DEPLOY
 
+- Update the plugin version in `woocommerce-apurata-payment-gateway.php`. This is what WordPress shows after installing the zip.
 - Run the "create_release.sh" script.
 - Draft a new release.
 - The tag name, must start with "v". Like past releases. (e. vx.y.z)
