@@ -258,10 +258,9 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
             // to avoid burning quota. Real HTTP errors (4xx/5xx) are always sent.
             $is_network_or_timeout = ($apiContext['http_code'] === 0 || (int) ($apiContext['curl_errno'] ?? 0) === 28);
             if ($is_network_or_timeout) {
-                $throttle_key = 'apurata_sentry_timeout_throttle';
-                if (!get_transient($throttle_key)) {
+                // Sample 0.05% of timeouts to Sentry to avoid burning quota (no DB).
+                if (random_int(0, 19999) < 10) {
                     $this->sendToSentry($message, null, $apiContext);
-                    set_transient($throttle_key, 1, 20 * MINUTE_IN_SECONDS);
                 }
             } else {
                 $this->sendToSentry($message, null, $apiContext);
