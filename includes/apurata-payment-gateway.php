@@ -595,7 +595,8 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
         }
 
         // Check Authorization
-        $auth = isset(getallheaders()['Apurata-Auth']) ? getallheaders()['Apurata-Auth'] : '';
+        $all_headers = array_change_key_case(getallheaders(), CASE_LOWER);
+        $auth = $all_headers['apurata-auth'] ?? $_SERVER['HTTP_APURATA_AUTH'] ?? '';
         if (!$auth) {
             apurata_log('Missing authorization header');
             $log = $log . "Missing authorization header;";
