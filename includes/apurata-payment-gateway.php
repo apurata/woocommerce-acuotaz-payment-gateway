@@ -98,12 +98,6 @@ class WC_Apurata_Payment_Gateway extends WC_Payment_Gateway
 
     public function init_hooks()
     {
-        add_action('before_woocommerce_init', function () {
-            if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
-                \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
-                \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
-            }
-        });
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
         add_action('woocommerce_checkout_init', array($this, 'show_payment_mocker_by_js_script'));
         add_action('wp_footer', array($this, 'add_payment_selection_handler')); // Works during AJAX

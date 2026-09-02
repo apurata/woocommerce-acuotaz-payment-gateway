@@ -1,6 +1,6 @@
 <?php
 /**
- * Version:           0.4.4
+ * Version:           0.4.5
  * Plugin Name:       WooCommerce aCuotaz Apurata Payment Gateway
  * Plugin URI:        https://github.com/apurata/woocommerce-apurata-payment-gateway
  * Description:       Finance your purchases with a quick aCuotaz Apurata loan.
@@ -13,7 +13,7 @@
  * Text Domain:       woocommerce-apurata-payment-gateway
  *
  * WC requires at least: 3.8.1
- * WC tested up to: 4.5.1
+ * WC tested up to: 7.0.0
 */
 
 defined( 'ABSPATH' ) or die( 'No script kiddies please!' );
@@ -41,6 +41,15 @@ if ($APURATA_API_DOMAIN == false) {
 if (!defined('WC_APURATA_BASENAME')) {
     define('WC_APURATA_BASENAME', plugin_basename(__FILE__));
 }
+
+// Declare WC feature compatibility early (before_woocommerce_init). Doing this from
+// plugins_loaded is too late and becomes a no-op.
+add_action('before_woocommerce_init', function () {
+    if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+    }
+});
 
 // Check if WooCommerce is active
 if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
