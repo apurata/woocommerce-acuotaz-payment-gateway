@@ -1,9 +1,9 @@
 # Installation
 
 1. Request credentials, Client ID and Secret Token
-2. Download the plugin [click here](https://github.com/apurata/woocommerce-acuotaz-payment-gateway/releases/download/v0.4.5/woocommerce-apurata-payment-gateway.zip)
+2. Download the plugin [click here](https://github.com/apurata/woocommerce-acuotaz-payment-gateway/releases/download/v0.4.6/woocommerce-apurata-payment-gateway.zip)
 3. Follow the video steps [here](https://www.youtube.com/watch?v=Ing3DjdB82k)
-  
+
 # Important considerations
 
 ---
